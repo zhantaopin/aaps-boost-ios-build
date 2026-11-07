@@ -56,3 +56,9 @@ plugins/aps/src/test/resources/boost_v1_backtest/*.csv
 plugins/aps/src/androidHostTest/resources/boost_v5_backtest/*.csv
 plugins/aps/src/androidHostTest/resources/boost_v1_backtest/*.csv
 plugins/aps/src/androidHostTest/resources/seqfc/seqfc_fixture.json
+
+# API 27 fork: local build outputs and signing material must never be committed
+/apk-out/
+*.aab
+*.jks
+*.keystore

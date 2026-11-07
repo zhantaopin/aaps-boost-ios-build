@@ -82,6 +82,30 @@ class ObjectivesPlugin(
         preferences.put(BooleanNonKey.ObjectivesScaleUsed, false)
     }
 
+    /**
+     * Dev-only shortcut: mark every objective started, every exam answered, and every objective
+     * accomplished on the spot. Minimum duration tasks are satisfied by setting startedOn to an
+     * hour in the past (so the wall-clock check succeeds immediately).
+     *
+     * This lives on the plugin (not a hidden dev key) so the UI can guard it behind a confirm
+     * dialog — users never hit it by accident. Toggle `developer_skip_objectives` in
+     * [app.aaps.core.keys.BooleanNonKey] if you want the dialog to remember the choice.
+     */
+    fun learnAllObjectives(dateUtil: app.aaps.core.interfaces.utils.DateUtil) {
+        val past = dateUtil.now() - 60 * 60 * 1000L
+        for (objective in objectives) {
+            if (objective.startedOn == 0L) objective.startedOn = past
+            for (task in objective.tasks) {
+                when (task) {
+                    is Objective.UITask   -> task.answered = true
+                    is Objective.ExamTask -> task.answered = true
+                    else                  -> { /* MinimumDurationTask is satisfied once startedOn != 0 */ }
+                }
+            }
+            objective.accomplishedOn = past
+        }
+    }
+
     fun allPriorAccomplished(position: Int): Boolean {
         var accomplished = true
         for (i in 0 until position) {

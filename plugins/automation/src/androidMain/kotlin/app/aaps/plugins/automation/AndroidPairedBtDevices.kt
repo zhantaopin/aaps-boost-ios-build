@@ -4,7 +4,7 @@ import android.Manifest
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
@@ -24,7 +24,7 @@ class AndroidPairedBtDevices(
 ) : PairedBtDevices {
 
     override fun names(): List<String>? {
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
+        if (!BluetoothPermissionCompat.connectGranted(context))
             return null
         val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager?
         // The adapter is null on a phone with no Bluetooth at all. That is "no devices", not

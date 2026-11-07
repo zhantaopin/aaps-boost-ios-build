@@ -317,9 +317,13 @@ enum class BooleanKey(
     ApsBoostV5AutoConfigDone("boost_v5_autoconfig_done", false, KeysStrings.pref_title_boost_v5_autoconfig_done, defaultedBySM = true),
     ApsBoostPostExerciseRecoveryEnabled("boost_post_exercise_recovery_enabled", false, KeysStrings.pref_title_boost_post_exercise_recovery_enabled, summary = KeysStrings.pref_summary_boost_post_exercise_recovery_enabled, defaultedBySM = true),
     ApsBoostActivityShadowEnabled("boost_activity_shadow_enabled", true, KeysStrings.pref_title_boost_activity_shadow_enabled, summary = KeysStrings.pref_summary_boost_activity_shadow_enabled, defaultedBySM = true),
+    ApsBoostPhoneStepsEnabled("boost_phone_steps_enabled", true, KeysStrings.pref_title_boost_phone_steps_enabled, summary = KeysStrings.pref_summary_boost_phone_steps_enabled, defaultedBySM = true),
     ApsBoostAutosensWhenNoTdd("boost_autosens_when_no_tdd", true, KeysStrings.pref_title_boost_autosens_when_no_tdd, summary = KeysStrings.pref_summary_boost_autosens_when_no_tdd, defaultedBySM = true),
     ApsBoostHrIntegrationEnabled("boost_hr_integration_enabled", false, KeysStrings.pref_title_boost_hr_integration_enabled, summary = KeysStrings.pref_summary_boost_hr_integration_enabled, defaultedBySM = true),
     ApsBoostHrStressDetection("boost_hr_stress_detection", false, KeysStrings.pref_title_boost_hr_stress_detection, summary = KeysStrings.pref_summary_boost_hr_stress_detection, defaultedBySM = true),
+    // Standalone-Android-watch heart rate source. Off by default: it samples the device's own PPG
+    // sensor, so it must be an explicit choice on a battery-constrained device.
+    ApsBoostWatchHrEnabled("boost_watch_hr_enabled", false, KeysStrings.pref_title_boost_watch_hr_enabled, summary = KeysStrings.pref_summary_boost_watch_hr_enabled, defaultedBySM = true),
     ApsBoostV2ChartFaithful("boost_v2_chart_faithful", false, KeysStrings.pref_title_boost_v2_chart_faithful, defaultedBySM = true),
 
     /**

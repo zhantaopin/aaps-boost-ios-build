@@ -1,14 +1,12 @@
 package app.aaps.pump.omnipod.common.bledriver.comm.legacy
 
-import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
-import androidx.core.app.ActivityCompat
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.pump.omnipod.common.bledriver.comm.exceptions.ConnectException
 import app.aaps.pump.omnipod.common.bledriver.comm.interfaces.device.BleDeviceManager
@@ -33,7 +31,7 @@ class LegacyBleDeviceManager(
         val device = adapter.getRemoteDevice(podAddress)
         if (device.bondState != android.bluetooth.BluetoothDevice.BOND_NONE) return true
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM &&
-            ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+            BluetoothPermissionCompat.connectGranted(context)
         ) {
             val result = device.createBond()
             aapsLogger.debug(LTag.PUMPBTCOMM, "Bonding with pod resulted $result")
@@ -46,7 +44,7 @@ class LegacyBleDeviceManager(
         try {
             if (!preferences.get(DashBooleanPreferenceKey.UseBonding) ||
                 Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM ||
-                ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+                !BluetoothPermissionCompat.connectGranted(context)
             ) {
                 return
             }

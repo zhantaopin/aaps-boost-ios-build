@@ -1,8 +1,8 @@
 package app.aaps.persistentNotification
 
-import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.content.Intent
+import android.os.Build
 import android.os.Binder
 import android.os.IBinder
 import app.aaps.core.interfaces.logging.AAPSLogger
@@ -77,8 +77,13 @@ class DummyService : MetroService() {
         try {
             aapsLogger.debug("Starting DummyService with ID ${notificationHolder.notificationID} notification ${notificationHolder.notification}")
             startForeground(notificationHolder.notificationID, notificationHolder.notification)
-        } catch (e: ForegroundServiceStartNotAllowedException) {
-            aapsLogger.warn(LTag.CORE, "Android does not allow DummyService into the foreground now: ${e.message}")
+        } catch (e: RuntimeException) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is android.app.ForegroundServiceStartNotAllowedException) {
+                aapsLogger.warn(LTag.CORE, "Android does not allow DummyService into the foreground now: ${e.message}")
+            } else {
+                // Anything else (security exception on older devices, etc.) - try the fallback notification
+                startForeground(4711, Notification())
+            }
         } catch (e: Exception) {
             startForeground(4711, Notification())
         }

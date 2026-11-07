@@ -16,6 +16,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.NotificationManager
+import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.resources.ResourceHelper
@@ -31,6 +32,7 @@ import app.aaps.core.objects.workflow.MetroWorkerCreator
 import app.aaps.core.ui.compose.icons.IcGenericCgm
 import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.plugins.source.AbstractBgSourcePlugin
+import app.aaps.plugins.source.applyUserOffset
 import app.aaps.plugins.source.compose.BgSourceComposeContent
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
@@ -113,7 +115,8 @@ class InstaraPlugin(
         // Request Overview refresh after successful insert/update.
         private val rxBus: RxBus,
         // Persist per-device Instara meta into preferences
-        private val preferences: Preferences
+        private val preferences: Preferences,
+        private val activePlugin: ActivePlugin
     ) : LoggingWorker(context, params, Dispatchers.IO, aapsLogger, fabricPrivacy) {
 
         /**
@@ -317,9 +320,10 @@ class InstaraPlugin(
                     val resolvedArrow: TrendArrow =
                         InstaraTrendArrowResolver.resolve(persistenceLayer, direction, mgdl, sgvId)
 
+                    val finalMgdl = applyUserOffset(mgdl, preferences, activePlugin)
                     val gv = GV(
                         timestamp = ts,
-                        value = mgdl,            // always mg/dL in GV.value
+                        value = finalMgdl,            // always mg/dL in GV.value
                         raw = rawMgdl,           // null or mg/dL
                         noise = null,
                         trendArrow = resolvedArrow, // Instara: use resolved arrow (may be calculated/fallback)

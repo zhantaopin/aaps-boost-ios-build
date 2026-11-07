@@ -12,6 +12,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.text.format.DateFormat
 import android.util.TypedValue
 import android.view.Gravity
@@ -811,7 +812,9 @@ class CustomWatchface : BaseWatchFace(), CwfRenderTarget {
     private fun updateClockHands() {
         // From the render instant, not the wall clock, so a prepared frame carries the hands of the
         // second it will be shown in - see [setRenderInstant].
-        val now = LocalTime.ofInstant(Instant.ofEpochMilli(renderNow()), ZoneId.systemDefault())
+        val instant = Instant.ofEpochMilli(renderNow())
+        val now = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) LocalTime.ofInstant(instant, ZoneId.systemDefault())
+        else instant.atZone(ZoneId.systemDefault()).toLocalTime()
         binding.secondHand.rotation = now.second * 6f
         binding.minuteHand.rotation = now.minute * 6f + now.second * 0.1f
         binding.hourHand.rotation = now.hour * 30f + now.minute * 0.5f + now.second * (0.5f / 60f)

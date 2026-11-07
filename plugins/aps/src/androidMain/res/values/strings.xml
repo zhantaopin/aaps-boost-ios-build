@@ -184,5 +184,7 @@
 
     <string name="boost_permission_activity_title">Physical activity</string>
     <string name="boost_permission_activity_description">Boost reads the phone step counter to recognise exercise, inactivity and a morning lie-in.</string>
+    <string name="boost_permission_body_sensors_title">Heart rate</string>
+    <string name="boost_permission_body_sensors_description">Boost samples this device\'s heart-rate sensor to improve sleep detection and, when enabled, exercise classification.</string>
     <string name="boost_history_insulin_assumed">Nightscout history will download shortly. Records that name no insulin take the insulin in use, or your only listed insulin, and are not changed later. Check that insulin is right before relying on past IOB.</string>
 </resources>

@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
@@ -35,8 +39,15 @@
     <!-- Boost: step counting for the activity logic, and Health Connect heart rate and steps for
          sleep detection and the activity-load shadow. -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- Standalone-watch heart rate source (Boost). Optional: the app installs on devices without
+         an HR sensor and the source stays hidden there. -->
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_STEPS" />
+
+    <uses-feature
+        android:name="android.hardware.sensor.heartrate"
+        android:required="false" />
 
     <!-- Required intent query for Health Connect on installations below SDK 34 -->
     <queries>

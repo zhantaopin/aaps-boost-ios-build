@@ -2,6 +2,7 @@ package app.aaps.core.ui.compose.pump
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -15,18 +16,12 @@ import androidx.core.content.ContextCompat
 
 /**
  * Gate composable that ensures Bluetooth runtime permissions
- * ([Manifest.permission.BLUETOOTH_SCAN] and [Manifest.permission.BLUETOOTH_CONNECT])
  * are granted before rendering its [content].
  *
- * Flow:
- * 1. On first composition, checks whether both permissions are granted.
- * 2. If granted → renders [content].
- * 3. If missing → automatically launches the system permission request.
- * 4. After the user responds: either renders [content] or [deniedContent],
- *    passing a `requestAgain` lambda so the caller can offer an inline retry.
- *
- * No dialogs are shown — the caller fully controls the denied UI so it can be
- * inlined into a pairing wizard or similar flow.
+ * Android 12+ (API 31+) uses BLUETOOTH_SCAN / BLUETOOTH_CONNECT.
+ * Below API 31 these constants do not exist at runtime — queries/requests
+ * would always return DENIED. Older Android uses BLUETOOTH (runtime) + FINE_LOCATION
+ * (BLE requires location on 6-11). BLUETOOTH_ADMIN is declared in Manifest only.
  */
 @Composable
 fun BluetoothPermissionsHost(
@@ -35,10 +30,17 @@ fun BluetoothPermissionsHost(
 ) {
     val context = LocalContext.current
     val permissions = remember {
-        arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+            )
+        } else {
+            arrayOf(
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+            )
+        }
     }
 
     fun allGranted(): Boolean = permissions.all {

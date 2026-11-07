@@ -1,6 +1,5 @@
 package app.aaps.pump.medtrum.ble
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -16,13 +15,12 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
-import androidx.core.app.ActivityCompat
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import app.aaps.core.interfaces.pump.ble.BleAdapter
 import app.aaps.core.interfaces.pump.ble.BleGatt
 import app.aaps.core.interfaces.pump.ble.BleScanner
@@ -137,7 +135,7 @@ class MedtrumBleTransportImpl(
 
     @Synchronized
     override fun connect(from: String, deviceSN: Long): Boolean {
-        if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT) || !hasPermission(Manifest.permission.BLUETOOTH_SCAN)) {
+        if (!BluetoothPermissionCompat.connectGranted(context) || !BluetoothPermissionCompat.scanGranted(context)) {
             rxBus.send(EventShowSnackbar(context.getString(app.aaps.core.ui.R.string.need_connect_permission), EventShowSnackbar.Type.Error))
             aapsLogger.error(LTag.PUMPBTCOMM, "missing permission: $from")
             return false
@@ -179,7 +177,7 @@ class MedtrumBleTransportImpl(
 
     @Synchronized
     override fun disconnect(from: String) {
-        if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
+        if (!BluetoothPermissionCompat.connectGranted(context)) {
             aapsLogger.error(LTag.PUMPBTCOMM, "missing permission: $from")
             return
         }
@@ -424,7 +422,7 @@ class MedtrumBleTransportImpl(
 
     @Synchronized
     private fun startConnectionScan(deviceSN: Long) {
-        if (!hasPermission(Manifest.permission.BLUETOOTH_SCAN)) return
+        if (!BluetoothPermissionCompat.scanGranted(context)) return
         aapsLogger.debug(LTag.PUMPBTCOMM, "startConnectionScan for SN: $deviceSN")
         connectionScanCallback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -459,9 +457,6 @@ class MedtrumBleTransportImpl(
         connectionScanCallback = null
     }
 
-    private fun hasPermission(permission: String): Boolean =
-        ActivityCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
-
     // --- BleAdapter ---
 
     private inner class MedtrumAdapterImpl : BleAdapter {
@@ -469,22 +464,22 @@ class MedtrumBleTransportImpl(
         override fun enable() = Unit
 
         override fun getDeviceName(address: String): String? {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return null
+            if (!BluetoothPermissionCompat.connectGranted(context)) return null
             return bluetoothAdapter?.getRemoteDevice(address)?.name
         }
 
         override fun isDeviceBonded(address: String): Boolean {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return false
+            if (!BluetoothPermissionCompat.connectGranted(context)) return false
             return bluetoothAdapter?.getRemoteDevice(address)?.bondState != BluetoothDevice.BOND_NONE
         }
 
         override fun createBond(address: String): Boolean {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return false
+            if (!BluetoothPermissionCompat.connectGranted(context)) return false
             return bluetoothAdapter?.getRemoteDevice(address)?.createBond() == true
         }
 
         override fun removeBond(address: String) {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return
+            if (!BluetoothPermissionCompat.connectGranted(context)) return
             try {
                 bluetoothAdapter?.bondedDevices?.firstOrNull { it.address == address }?.let {
                     it.javaClass.getMethod("removeBond").invoke(it)
@@ -504,7 +499,7 @@ class MedtrumBleTransportImpl(
         override val scannedDevices: SharedFlow<ScannedDevice> = _scannedDevices
 
         override fun startScan() {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_SCAN)) return
+            if (!BluetoothPermissionCompat.scanGranted(context)) return
             scanCallback = object : ScanCallback() {
                 override fun onScanResult(callbackType: Int, result: ScanResult) {
                     val name = result.device?.name ?: return
@@ -546,7 +541,7 @@ class MedtrumBleTransportImpl(
     private inner class MedtrumGattImpl : BleGatt {
 
         override fun connect(address: String): Boolean {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return false
+            if (!BluetoothPermissionCompat.connectGranted(context)) return false
             val device = bluetoothAdapter?.getRemoteDevice(address) ?: return false
             connectGatt(device)
             return true

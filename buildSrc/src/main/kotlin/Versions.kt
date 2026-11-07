@@ -9,9 +9,9 @@ object Versions {
     const val versionCode = 1500
 
     const val compileSdk = 37
-    const val minSdk = 31
+    const val minSdk = 27
     const val targetSdk = 35
-    const val wearMinSdk = 30
+    const val wearMinSdk = 27
     const val wearTargetSdk = 30
 
     // Boost version, uploaded to Nightscout as apsConfiguration.boostVersion with the branch and

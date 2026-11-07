@@ -182,7 +182,9 @@ class FileListProviderImpl(
     override fun newPreferenceFile(): DocumentFile? {
         val timeLocal = LocalDateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd'_'HHmmss"))
         val dir = ensurePreferenceDirExists()
-        return dir?.createFile("application/json", timeLocal + "_" + config().FLAVOR)
+        // Some OEMs' DocumentsProvider do not honour the MIME type → they create "file" with no
+        // extension, which makes the JSON import picker filter it out. Append the suffix ourselves.
+        return dir?.createFile("application/json", "$timeLocal" + "_" + config().FLAVOR + ".json")
     }
 
     override fun newExportCsvFile(): DocumentFile? {
@@ -194,7 +196,12 @@ class FileListProviderImpl(
     override fun newCwfFile(filename: String, withDate: Boolean): DocumentFile? {
         val timeLocal = LocalDateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd'_'HHmmss"))
         val dir = ensureExportDirExists()
-        return dir?.createFile("application/${ZipWatchfaceFormat.CWF_EXTENSION}", if (withDate) "${filename}_$timeLocal" else filename)
+        // DocumentsProvider may ignore the CWF_EXTENSION MIME → pin the suffix in the filename.
+        val name = (if (withDate) "${filename}_$timeLocal" else filename).let {
+            if (it.endsWith(".${ZipWatchfaceFormat.CWF_EXTENSION}")) it
+            else "$it.${ZipWatchfaceFormat.CWF_EXTENSION}"
+        }
+        return dir?.createFile("application/${ZipWatchfaceFormat.CWF_EXTENSION}", name)
     }
 
     override fun newResultFile(): File {

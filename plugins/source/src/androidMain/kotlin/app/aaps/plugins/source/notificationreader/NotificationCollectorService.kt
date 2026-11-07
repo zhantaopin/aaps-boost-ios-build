@@ -15,9 +15,11 @@ import app.aaps.core.interfaces.di.MetroMemberInjector
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.profile.ProfileFunction
+import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.plugins.source.NotificationReaderPlugin
+import app.aaps.plugins.source.applyUserOffset
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,7 @@ class NotificationCollectorService : NotificationListenerService() {
     @Inject lateinit var persistenceLayer: PersistenceLayer
     @Inject lateinit var profileFunction: ProfileFunction
     @Inject lateinit var preferences: Preferences
+    @Inject lateinit var activePlugin: ActivePlugin
 
     private var parser: NotificationParser? = null
     private var deduplicator: GlucoseDeduplicator? = null
@@ -96,9 +99,11 @@ class NotificationCollectorService : NotificationListenerService() {
             return
         }
 
+        val bgRaw = result.glucoseMgdl.toDouble()
+        val bgFinal = applyUserOffset(bgRaw, preferences, activePlugin)
         val gv = GV(
             timestamp = now,
-            value = result.glucoseMgdl.toDouble(),
+            value = bgFinal,
             raw = null,
             noise = null,
             trendArrow = TrendArrow.NONE,

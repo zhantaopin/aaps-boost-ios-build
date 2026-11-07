@@ -98,4 +98,6 @@
     <!--    autoISF -->
     <string name="autoISF_settings_title">自動ISF設定</string>
     <string name="smb_delivery_settings_title">SMB輸送設定</string>
+    <string name="boost_permission_body_sensors_title">心率</string>
+    <string name="boost_permission_body_sensors_description">Boost 會取樣本機的心率感測器，用於改進睡眠偵測，並在開啟後用於運動分類。</string>
 </resources>

@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.WindowManager
@@ -271,7 +272,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         // Other apps may not draw over AAPS: an overlay could hide what a tap really does, for example on a bolus
         // confirmation. It also covers the dialogs, because this window stays visible under them. System and
         // accessibility overlays still show. Needs HIDE_OVERLAY_WINDOWS.
-        window.setHideOverlayWindows(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) window.setHideOverlayWindows(true)
 
         // Activity result launchers (from base class)
         accessTree = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->

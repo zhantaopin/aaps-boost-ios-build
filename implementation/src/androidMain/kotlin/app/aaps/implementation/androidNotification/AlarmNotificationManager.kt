@@ -10,6 +10,7 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.net.Uri
+import android.os.Build
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import app.aaps.core.interfaces.alerts.EatReminder
@@ -178,7 +179,9 @@ class AlarmNotificationManager(
     private val channels: Unit by lazy { createChannels() }
 
     private fun createChannels() {
-        mgr.createNotificationChannelGroup(NotificationChannelGroup(GROUP_ID, context.getString(R.string.alarm_channel_group)))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mgr.createNotificationChannelGroup(NotificationChannelGroup(GROUP_ID, context.getString(R.string.alarm_channel_group)))
+        }
 
         // Harmless if absent.
         OLD_CHANNEL_IDS.forEach { mgr.deleteNotificationChannel(it) }
@@ -412,7 +415,7 @@ class AlarmNotificationManager(
      */
     internal fun scheduleScreenWakeAndLaunch(activityPendingIntent: PendingIntent) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        if (!am.canScheduleExactAlarms()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
             aapsLogger.warn(LTag.NOTIFICATION, "Exact alarms not allowed - alarm rings, but the screen is not woken")
             return
         }

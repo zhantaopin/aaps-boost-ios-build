@@ -3,14 +3,19 @@ package app.aaps
 import android.app.Application
 import android.app.LocaleManager
 import android.bluetooth.BluetoothDevice
+import android.content.ContentValues
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.LocaleList
+import android.provider.MediaStore
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import app.aaps.core.data.configuration.Constants
@@ -79,7 +84,12 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import rxdogtag2.RxDogTag
+import java.io.File
 import java.io.IOException
+import java.io.PrintWriter
+import java.io.StringWriter
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.declaredMemberProperties
@@ -208,6 +218,58 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
     private lateinit var refreshWidget: Runnable
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    /**
+     * Writes an uncaught exception to a file the user can hand over without adb.
+     *
+     * A crash that kills the process normally leaves nothing behind that a phone without developer
+     * options can show: logcat is not readable, Firebase reports go somewhere else. The AAPS
+     * directory is a folder the user already picked and any file manager can open, so the stack is
+     * also written there, next to `preferences`, once that setting is available.
+     */
+    private fun installCrashLogger() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            val stamp = SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US).format(Date())
+            val text = buildString {
+                appendLine("time: $stamp")
+                appendLine("thread: ${thread.name}")
+                appendLine("device: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.SDK_INT} (API ${Build.VERSION.SDK_INT})")
+                appendLine("aaps: ${BuildConfig.VERSION_NAME} (${BuildConfig.COMMITTED})")
+                appendLine()
+                val sw = StringWriter()
+                throwable.printStackTrace(PrintWriter(sw))
+                append(sw.toString())
+            }
+            runCatching {
+                val dir = getExternalFilesDir(null) ?: return@runCatching
+                File(dir, "crash-$stamp.txt").writeText(text)
+            }
+            // Downloads is the one folder every phone's file manager shows, and MediaStore needs no
+            // permission for the app's own file from Android 10 on. On 8/9 it would, so the AAPS
+            // directory below stays the way out there.
+            runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, "aaps-crash-$stamp.txt")
+                        put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    }
+                    contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)?.let { uri ->
+                        contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+                    }
+                }
+            }
+            runCatching {
+                val tree = preferences.getIfExists(StringKey.AapsDirectoryUri) ?: return@runCatching
+                val dir = DocumentFile.fromTreeUri(this, tree.toUri()) ?: return@runCatching
+                dir.createFile("text/plain", "crash-$stamp.txt")?.let { file ->
+                    contentResolver.openOutputStream(file.uri)?.use { it.write(text.toByteArray()) }
+                }
+            }
+            previous?.uncaughtException(thread, throwable)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
 
@@ -226,6 +288,9 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
         // Applies the analytics opt-out. Must come before configureLeakCanary below, which reports
         // through fabricPrivacy.
         fabricPrivacyImpl.start()
+        // After fabricPrivacy: Crashlytics installs an uncaught handler of its own when it initializes,
+        // and one installed before this line would be replaced rather than chained.
+        installCrashLogger()
         // Build identity goes on the crash report here, not in setUserStats() near the end of doInit.
         // A crash during plugin initialization happens seconds before that runs, so those reports carried
         // no HEAD and no Committed - exactly the ones where the build has to be known to tell a stale

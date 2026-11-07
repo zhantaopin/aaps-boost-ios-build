@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.alerts.EatReminder
@@ -56,7 +57,7 @@ class AndroidEatReminderAlarm(
     override fun schedule(startedAt: Long, endsAt: Long): Boolean {
         // setAlarmClock needs SCHEDULE_EXACT_ALARM unless AAPS is excluded from battery optimization.
         // PluginPermissionsImpl asks for it; without it the timer is not started at all.
-        if (!alarmManager.canScheduleExactAlarms()) return notSet(null)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) return notSet(null)
         try {
             val show = notificationHolder().openAppIntent() ?: ringIntent()
             alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(endsAt, show), ringIntent())

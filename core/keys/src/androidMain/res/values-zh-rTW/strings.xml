@@ -380,4 +380,10 @@
     <string name="lgs_threshold_summary">當血糖低於此值時，將暫停胰島素。預設值使用標準目標模型。使用者可將數值設定在 60 mg/dl（3.3 mmol/l）與 100 mg/dl（5.5 mmol/l）之間。若低於 65/3.6，則改用預設模型。</string>
     <!-- IntentKey preferences -->
     <!--    Appearance preferences-->
+    <string name="pref_title_boost_phone_steps_enabled">手機計步</string>
+    <string name="pref_summary_boost_phone_steps_enabled">使用本機計步器進行 Boost 的活動、久坐與睡懶覺判斷。如果計步不準確請關閉，Boost 將僅依血糖運行。</string>
+    <string name="pref_title_boost_watch_hr_enabled">手錶心率來源</string>
+    <string name="pref_summary_boost_watch_hr_enabled">每隔幾分鐘取樣本機心率感測器 60 秒。用於睡眠偵測；開啟「心率整合」後也用於運動分類。會增加耗電。</string>
+    <string name="pref_title_boost_watch_hr_interval_min">心率取樣間隔</string>
+    <string name="pref_summary_boost_watch_hr_interval_min">兩次 60 秒心率取樣之間的分鐘數。間隔越長越省電。</string>
 </resources>

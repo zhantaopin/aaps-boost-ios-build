@@ -3,6 +3,7 @@ package app.aaps.wear.complications.cwf
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.os.Build
 import androidx.core.graphics.createBitmap
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
@@ -246,10 +247,13 @@ class CwfFramePipeline(
      * Compressed rather than sent raw because a raw 450x450 frame is 791 kB, and shipping that across
      * Binder every second had the system killing the process.
      */
+    @Suppress("DEPRECATION") // WEBP is the API 27 fallback for WEBP_LOSSLESS
     fun encode(bitmap: Bitmap): ByteArray {
         val started = System.currentTimeMillis()
         val stream = ByteArrayOutputStream(COMPRESS_HINT_BYTES)
-        bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, stream)
+        val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Bitmap.CompressFormat.WEBP_LOSSLESS
+        else Bitmap.CompressFormat.WEBP
+        bitmap.compress(format, 100, stream)
         bitmap.recycle()
         // Only a steady frame sets the pace; see [rebuiltThisFrame]
         if (!rebuiltThisFrame) lastFrameMs = lastComposeMs + (System.currentTimeMillis() - started)

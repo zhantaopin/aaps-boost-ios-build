@@ -178,6 +178,15 @@ class ObjectivesViewModel(
         }
     }
 
+    fun onLearnAll() {
+        objectivesPlugin.learnAllObjectives(dateUtil)
+        scope.launch {
+            updateState()
+            scrollToCurrentObjective()
+            rxBus.send(app.aaps.core.interfaces.rx.events.EventSWUpdate(false))
+        }
+    }
+
     fun onStart(objectiveIndex: Int) {
         val objective = objectivesPlugin.objectives[objectiveIndex]
         receiverStatusStore.updateNetworkStatus()

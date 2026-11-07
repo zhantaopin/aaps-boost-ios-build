@@ -436,6 +436,12 @@
     <string name="pref_summary_aps_loop_at_native_cadence">Run the loop on every sensor reading rather than once per five minutes. No effect on a five-minute sensor. On a one-minute sensor this makes the loop run every minute, which also allows more frequent SMBs.</string>
     <string name="pref_title_boost_activity_pct">Activity Profile Percent</string>
     <string name="pref_title_boost_activity_shadow_enabled">Activity-load shadow (steps)</string>
+    <string name="pref_title_boost_phone_steps_enabled">Phone step counting</string>
+    <string name="pref_summary_boost_phone_steps_enabled">Use this device\'s step counter for Boost activity, inactivity and lie-in detection. Turn off if the step count is unreliable; Boost then runs on glucose alone.</string>
+    <string name="pref_title_boost_watch_hr_enabled">Watch heart rate source</string>
+    <string name="pref_summary_boost_watch_hr_enabled">Sample this device\'s own heart-rate sensor for 60 seconds every few minutes. Used by sleep detection, and by exercise classification when Heart Rate Integration is on. Costs battery.</string>
+    <string name="pref_title_boost_watch_hr_interval_min">Heart rate sampling interval</string>
+    <string name="pref_summary_boost_watch_hr_interval_min">Minutes between 60-second heart-rate samples. Longer intervals save battery.</string>
     <string name="pref_title_boost_activity_steps_15">15-Minute Activity Steps</string>
     <string name="pref_title_boost_activity_steps_30">30-Minute Activity Steps</string>
     <string name="pref_title_boost_activity_steps_5">5-Minute Activity Steps</string>

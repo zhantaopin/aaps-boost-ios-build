@@ -1,6 +1,5 @@
 package app.aaps.pump.insight.compose
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -11,9 +10,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
-import android.content.pm.PackageManager
 import android.os.IBinder
-import androidx.core.app.ActivityCompat
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import app.aaps.core.interfaces.pump.PumpSync
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.utils.extensions.safeEnable
@@ -164,7 +162,7 @@ internal class InsightPairState(
     private fun startBLScan() {
         if (scanning) return
         // Without the permission Android throws a SecurityException, and the app ends
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) return
+        if (!BluetoothPermissionCompat.scanGranted(context)) return
         val bluetoothAdapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter ?: return
         if (!bluetoothAdapter.isEnabled) bluetoothAdapter.safeEnable()
         val intentFilter = IntentFilter().apply {

@@ -137,8 +137,10 @@ class PluginPermissionsImpl(
                 preferences.getIfExists(StringKey.AapsDirectoryUri).isNullOrEmpty()
 
             Manifest.permission.SCHEDULE_EXACT_ALARM                 -> {
-                val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-                am.canScheduleExactAlarms().not()
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) false else run {
+                    val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                    am.canScheduleExactAlarms().not()
+                }
             }
 
             PERMISSION_NOTIFICATION_LISTENER                         ->

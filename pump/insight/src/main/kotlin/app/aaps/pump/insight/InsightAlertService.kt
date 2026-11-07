@@ -4,13 +4,14 @@ import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.app.Service
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.os.Build
 import android.os.Binder
 import android.os.IBinder
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.MutableLiveData
@@ -87,7 +88,12 @@ class InsightAlertService : Service(), InsightConnectionService.StateCallback {
         // What MetroService does; this module does not depend on :core:objects, where that base lives.
         injectMetroMembers(this)
         super.onCreate()
-        vibrator = (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as android.os.VibratorManager).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
         bindService(Intent(this, InsightConnectionService::class.java), serviceConnection, BIND_AUTO_CREATE)
         alertLiveData.value = null
     }

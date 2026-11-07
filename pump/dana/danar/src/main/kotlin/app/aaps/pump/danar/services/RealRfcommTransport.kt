@@ -5,10 +5,9 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import app.aaps.core.interfaces.pump.rfcomm.RfcommDevice
 import app.aaps.core.interfaces.pump.rfcomm.RfcommSocket
 import app.aaps.core.interfaces.pump.rfcomm.RfcommTransport
@@ -31,7 +30,7 @@ class RealRfcommTransport(
 
     @SuppressLint("MissingPermission")
     override fun getSocketForDevice(deviceName: String): RfcommSocket? {
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+        if (!BluetoothPermissionCompat.connectGranted(context)) {
             return null
         }
 
@@ -49,7 +48,7 @@ class RealRfcommTransport(
 
     @SuppressLint("MissingPermission")
     override fun getBondedDevices(): List<RfcommDevice> {
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+        if (!BluetoothPermissionCompat.connectGranted(context)) {
             return emptyList()
         }
 

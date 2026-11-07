@@ -14,6 +14,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.NotificationManager
+import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.resources.ResourceHelper
@@ -71,7 +72,9 @@ class GlimpPlugin(
         aapsLogger: AAPSLogger,
         fabricPrivacy: FabricPrivacy,
         private val glimpPlugin: GlimpPlugin,
-        private val persistenceLayer: PersistenceLayer
+        private val persistenceLayer: PersistenceLayer,
+        private val activePlugin: ActivePlugin,
+        private val preferences: Preferences
     ) : LoggingWorker(context, params, Dispatchers.IO, aapsLogger, fabricPrivacy) {
 
         /**
@@ -90,10 +93,12 @@ class GlimpPlugin(
 
             if (!glimpPlugin.isEnabled()) return Result.success(workDataOf("Result" to "Plugin not enabled"))
             aapsLogger.debug(LTag.BGSOURCE, "Received Glimp Data: $inputData}")
+            val bgRaw = inputData.getDouble("mySGV", 0.0)
+            val bgFinal = applyUserOffset(bgRaw, preferences, activePlugin)
             val glucoseValues = mutableListOf<GV>()
             glucoseValues += GV(
                 timestamp = inputData.getLong("myTimestamp", 0),
-                value = inputData.getDouble("mySGV", 0.0),
+                value = bgFinal,
                 raw = null,
                 noise = null,
                 trendArrow = TrendArrow.fromString(inputData.getString("myTrend")),

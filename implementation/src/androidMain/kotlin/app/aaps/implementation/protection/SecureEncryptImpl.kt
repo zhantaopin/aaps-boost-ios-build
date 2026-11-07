@@ -3,9 +3,9 @@ package app.aaps.implementation.protection
 // Core
 
 // Android KeyStore
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import android.security.keystore.StrongBoxUnavailableException
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.protection.SecureEncrypt
@@ -147,8 +147,10 @@ class SecureEncryptImpl(
 
         // Create new KeyStore alias or reuse existing key generation or retrieval
         if (!keyStoreIsAvailable || forceNew) {
-            // Prefer StrongBox-backed key (separate secure chip) when available, fall back to TEE-backed
-            return generateAesKey(keyAlias, strongBox = true) ?: generateAesKey(keyAlias, strongBox = false)!!
+            // Prefer StrongBox-backed key (separate secure chip) when available, fall back to TEE-backed.
+            // setIsStrongBoxBacked() is API 28 (Android 9) - minSdk 27 must never call it, see #XXXX.
+            val tryStrongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+            return generateAesKey(keyAlias, tryStrongBox) ?: generateAesKey(keyAlias, strongBox = false)!!
         }
         // Else: Alias exists in KeyStore: retrieve existing key
         return retrieveSecretKeyFromKeyStore(keyAlias)
@@ -160,16 +162,21 @@ class SecureEncryptImpl(
         )
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .apply { if (strongBox) setIsStrongBoxBacked(true) }
+            .apply { if (strongBox && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) setIsStrongBoxBacked(true) }
             .build()
         val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
         keyGenerator.init(keyGenParameterSpec)
         keyGenerator.generateKey()
-    } catch (e: StrongBoxUnavailableException) {
-        if (strongBox) {
+    } catch (e: Exception) {
+        // StrongBoxUnavailableException is API 28; on API 27 catching it directly would throw
+        // NoClassDefFoundError at class-load time even before this code runs. Match by class name instead.
+        val isStrongBoxUnavailable = e.javaClass.name == "android.security.keystore.StrongBoxUnavailableException"
+        if (isStrongBoxUnavailable && strongBox) {
             log.info(LTag.CORE, "$MODULE: StrongBox unavailable, falling back to TEE-backed key for alias=$keyAlias")
             null
-        } else throw e
+        } else {
+            throw e
+        }
     }
 
     /***

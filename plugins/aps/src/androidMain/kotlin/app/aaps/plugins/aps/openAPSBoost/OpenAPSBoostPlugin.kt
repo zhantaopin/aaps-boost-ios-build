@@ -3,6 +3,8 @@ package app.aaps.plugins.aps.openAPSBoost
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import app.aaps.core.data.aps.SMBDefaults
 import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.model.BS
@@ -553,7 +555,12 @@ open class OpenAPSBoostPlugin @Inject constructor(
     override suspend fun onStart() {
         super.onStart()
         aapsLogger.info(LTag.APS, "Boost engine starting, version ${BoostBuildInfo.BOOST_VERSION}")
-        BoostStepSensor.register(context, aapsLogger)
+        BoostStepSensor.register(
+            context,
+            aapsLogger,
+            preferences.get(BooleanKey.ApsBoostPhoneStepsEnabled)
+        )
+        watchHrSource.start()
         calibrationJob?.cancel()
         calibrationJob = pluginScope.launch {
             try {
@@ -590,7 +597,12 @@ open class OpenAPSBoostPlugin @Inject constructor(
 
     @Volatile private var calibrationSourceJob: Job? = null
 
+    // Standalone-watch HR source. The loop is started once per plugin start and reads its switch
+    // each iteration, so toggling the preference does not need an app restart.
+    private val watchHrSource by lazy { WatchHrSource(context, persistenceLayer, preferences, aapsLogger, pluginScope) }
+
     override suspend fun onStop() {
+        watchHrSource.stop()
         calibrationJob?.cancel()
         calibrationJob = null
         calibrationSourceJob?.cancel()
@@ -728,15 +740,35 @@ open class OpenAPSBoostPlugin @Inject constructor(
     // 3.4 supportsDynamicIsf() is usingDynamicIsf() in AAPS 4.0.
     override fun usingDynamicIsf() = true
 
-    // The phone step counter needs ACTIVITY_RECOGNITION. Boost 3.4 asked for it through the app's
-    // permission notifications; AAPS 4.0 asks for what each plugin declares here.
-    override fun requiredPermissions(): List<PermissionGroup> = listOf(
-        PermissionGroup(
-            permissions = listOf(Manifest.permission.ACTIVITY_RECOGNITION),
-            rationaleTitle = ApsStrings.boost_permission_activity_title,
-            rationaleDescription = ApsStrings.boost_permission_activity_description
-        )
-    )
+    // The phone step counter needs ACTIVITY_RECOGNITION, but only from Android 10: below Q the
+    // permission does not exist and asking for it leaves a permanently "not granted" row that
+    // cannot be granted. The step counter itself needs no permission there.
+    // BODY_SENSORS is the standalone-watch HR source; it exists since API 20 and is only declared
+    // when the device actually has an HR sensor and the source is switched on.
+    override fun requiredPermissions(): List<PermissionGroup> = buildList {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            preferences.get(BooleanKey.ApsBoostPhoneStepsEnabled)
+        ) {
+            add(
+                PermissionGroup(
+                    permissions = listOf(Manifest.permission.ACTIVITY_RECOGNITION),
+                    rationaleTitle = ApsStrings.boost_permission_activity_title,
+                    rationaleDescription = ApsStrings.boost_permission_activity_description
+                )
+            )
+        }
+        if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_HEART_RATE) &&
+            preferences.get(BooleanKey.ApsBoostWatchHrEnabled)
+        ) {
+            add(
+                PermissionGroup(
+                    permissions = listOf(Manifest.permission.BODY_SENSORS),
+                    rationaleTitle = ApsStrings.boost_permission_body_sensors_title,
+                    rationaleDescription = ApsStrings.boost_permission_body_sensors_description
+                )
+            )
+        }
+    }
 
     override fun getIsfMgdl(profile: Profile, caller: String): Double? {
         // Boost computes ISF dynamically inside determine_basal via getIsfByProfile()
@@ -1046,10 +1078,14 @@ open class OpenAPSBoostPlugin @Inject constructor(
             aapsLogger.debug(LTag.APS, "Boost disabled due to high temptarget of $targetBg")
         }
 
-        var recentSteps5Min = StepService.getRecentStepCount5Min()
-        var recentSteps15Min = StepService.getRecentStepCount15Min()
-        var recentSteps30Min = StepService.getRecentStepCount30Min()
-        var recentSteps60Min = StepService.getRecentStepCount60Min()
+        // With phone step counting switched off, the in-memory counters keep running until the
+        // process restarts, so they are zeroed here rather than trusted. Watch/Garmin SC rows are
+        // a separate source and stay in play.
+        val phoneStepsEnabled = preferences.getBoostDosing(BooleanKey.ApsBoostPhoneStepsEnabled)
+        var recentSteps5Min = if (phoneStepsEnabled) StepService.getRecentStepCount5Min() else 0
+        var recentSteps15Min = if (phoneStepsEnabled) StepService.getRecentStepCount15Min() else 0
+        var recentSteps30Min = if (phoneStepsEnabled) StepService.getRecentStepCount30Min() else 0
+        var recentSteps60Min = if (phoneStepsEnabled) StepService.getRecentStepCount60Min() else 0
         // F3 fix: the live exercise classifier read PHONE StepService ONLY, so watch
         // steps (wear AND Garmin, which land in the SC table) never influenced exercise state — a
         // pre-existing gap that Garmin workstream B forced into the open. Blend the freshest watch
@@ -1081,7 +1117,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
             emptyList()
         }
         val stepFeed = StepFeed.State(
-            phoneLive = StepService.feedState() == StepService.FeedState.LIVE,
+            phoneLive = phoneStepsEnabled && StepService.feedState() == StepService.FeedState.LIVE,
             wearAgeMs = WearStepSource.latest(wearScRecent)?.let { now - it.timestamp }
         )
         val stepsAvailable = stepFeed.available
@@ -2584,7 +2620,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
             // Watch and phone day totals kept apart; the detector measures growth on each.
             val watchStepsToday = WearStepSource.stepsToday(scTodayForSleep, sleepDayStartMs, now)
             // Without the Health Connect top-up, which lands as one jump.
-            val phoneStepsToday = StepService.getOwnStepsToday(localOffsetMs)
+            val phoneStepsToday = if (preferences.getBoostDosing(BooleanKey.ApsBoostPhoneStepsEnabled)) StepService.getOwnStepsToday(localOffsetMs) else 0
             // Live state before this cycle, kept for the pre-window shadow's seed.
             val livePrevSleep = sleepStateCached
             val sleepInputs = SleepStateDetector.Inputs(
@@ -2668,7 +2704,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
 
     /** Phone 15-min steps with the freshest watch row's 15-min count, the larger taken, as the gate. */
     private suspend fun blendedSteps15Min(now: Long): Int {
-        val phone = StepService.getRecentStepCount15Min()
+        val phone = if (preferences.getBoostDosing(BooleanKey.ApsBoostPhoneStepsEnabled)) StepService.getRecentStepCount15Min() else 0
         val watch = try {
             persistenceLayer.getStepsCountFromTimeToTime(now - 15 * 60_000L, now).maxByOrNull { sc -> sc.timestamp }?.steps15min ?: 0
         } catch (t: Throwable) { 0 }
@@ -2896,6 +2932,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
                         title = ApsStrings.boost_stepcount_settings_title,
                         summary = ApsStrings.boost_stepcount_settings_summary,
                         items = listOf(
+                            BooleanKey.ApsBoostPhoneStepsEnabled,
                             IntKey.ApsBoostInactivitySteps,
                             DoubleKey.ApsBoostInactivityPct,
                             DoubleKey.ApsBoostSleepInHours,
@@ -2914,6 +2951,8 @@ open class OpenAPSBoostPlugin @Inject constructor(
                         summary = ApsStrings.boost_hr_integration_summary,
                         items = listOf(
                             BooleanKey.ApsBoostHrIntegrationEnabled,
+                            BooleanKey.ApsBoostWatchHrEnabled,
+                            IntKey.ApsBoostWatchHrIntervalMin,
                             IntKey.ApsBoostHrMaxBpm,
                             IntKey.ApsBoostHrRestingBpm,
                             IntKey.ApsBoostHrWindowMinutes,

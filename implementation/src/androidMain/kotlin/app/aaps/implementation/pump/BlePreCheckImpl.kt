@@ -9,6 +9,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import app.aaps.core.interfaces.pump.BlePreCheck
 import app.aaps.core.interfaces.pump.BlePreCheckResult
 import app.aaps.core.interfaces.resources.ResourceHelper
@@ -41,10 +42,10 @@ class BlePreCheckImpl(
             rxBus.send(EventShowDialog.Ok(title = rh.gs(app.aaps.core.ui.R.string.message), message = rh.gs(app.aaps.core.ui.R.string.ble_not_supported)))
             return false
         } else {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
+            if (!BluetoothPermissionCompat.connectGranted(context) ||
+                !BluetoothPermissionCompat.scanGranted(context)
             ) {
-                ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT), PERMISSION_REQUEST_BLUETOOTH)
+                ActivityCompat.requestPermissions(activity, BluetoothPermissionCompat.requestedPermissions(), PERMISSION_REQUEST_BLUETOOTH)
                 return false
             }
 
@@ -68,8 +69,8 @@ class BlePreCheckImpl(
             return BlePreCheckResult.BLE_NOT_SUPPORTED
         }
 
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
+        if (!BluetoothPermissionCompat.connectGranted(context) ||
+            !BluetoothPermissionCompat.scanGranted(context)
         ) {
             return BlePreCheckResult.PERMISSIONS_MISSING
         }

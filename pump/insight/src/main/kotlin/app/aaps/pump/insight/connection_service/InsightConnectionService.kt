@@ -1,19 +1,17 @@
 package app.aaps.pump.insight.connection_service
 
-import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
 import android.os.PowerManager
-import androidx.core.app.ActivityCompat
 import app.aaps.core.interfaces.di.injectMetroMembers
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.pump.insight.app_layer.AppLayerMessage
 import app.aaps.pump.insight.app_layer.AppLayerMessage.Companion.unwrap
@@ -277,7 +275,7 @@ class InsightConnectionService : android.app.Service(), ConnectionEstablisher.Ca
         // What MetroService does; this module does not depend on :core:objects, where that base lives.
         injectMetroMembers(this)
         super.onCreate()
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+        if (BluetoothPermissionCompat.connectGranted(this)) {
             bluetoothAdapter = (applicationContext.getSystemService(BLUETOOTH_SERVICE) as BluetoothManager).adapter
         }
         pairingDataStorage = PairingDataStorage(this)

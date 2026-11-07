@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import app.aaps.core.interfaces.alerts.ReminderScheduler
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
@@ -44,7 +45,7 @@ class ReminderSchedulerImpl(
     override fun scheduleReminder(seconds: Int, text: String) {
         try {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            if (!alarmManager.canScheduleExactAlarms()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
                 aapsLogger.warn(LTag.AUTOMATION, "Exact alarms not allowed - reminder \"$text\" not set")
                 rxBus.send(EventShowSnackbar(rh.gs(AutomationStrings.error_setting_reminder), EventShowSnackbar.Type.Error))
                 return

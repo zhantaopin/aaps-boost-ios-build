@@ -18,6 +18,7 @@ import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.notifications.NotificationManager
+import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.receivers.Intents
@@ -91,7 +92,9 @@ class AidexPlugin(
         fabricPrivacy: FabricPrivacy,
         private val aidexPlugin: AidexPlugin,
         private val persistenceLayer: PersistenceLayer,
-        private val rxBus: RxBus
+        private val rxBus: RxBus,
+        private val activePlugin: ActivePlugin,
+        private val preferences: Preferences
     ) : LoggingWorker(context, params, Dispatchers.IO, aapsLogger, fabricPrivacy) {
 
         /**
@@ -137,10 +140,11 @@ class AidexPlugin(
             val isValidValue = bgValueTarget > 0 && !aidexPlugin._hasSensorError
 
             if (isValidValue) {
+                val bgValueFinal = applyUserOffset(bgValueTarget, preferences, activePlugin)
                 val glucoseValues = mutableListOf<GV>()
                 glucoseValues += GV(
                     timestamp = timestamp,
-                    value = bgValueTarget,
+                    value = bgValueFinal,
                     raw = null,
                     noise = null,
                     trendArrow = TrendArrow.fromString(bgSlopeName),

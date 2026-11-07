@@ -13,11 +13,10 @@ import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.SystemClock
-import androidx.core.app.ActivityCompat
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import app.aaps.core.interfaces.pump.ble.BleAdapter
 import app.aaps.core.interfaces.pump.ble.BleGatt
 import app.aaps.core.interfaces.pump.ble.BleScanner
@@ -180,8 +179,8 @@ class BleTransportImpl(
         @SuppressLint("MissingPermission")
         override fun startScan() {
             // Without the permission Android throws a SecurityException, and the app ends
-            if (!hasPermission(Manifest.permission.BLUETOOTH_SCAN)) {
-                aapsLogger.error(LTag.PUMPBTCOMM, "BLUETOOTH_SCAN permission missing, no scan")
+            if (!BluetoothPermissionCompat.scanGranted(context)) {
+                aapsLogger.error(LTag.PUMPBTCOMM, "Bluetooth scan permission missing, no scan")
                 return
             }
             scanCallback = object : ScanCallback() {
@@ -295,6 +294,5 @@ class BleTransportImpl(
         }
     }
 
-    private fun hasPermission(permission: String = Manifest.permission.BLUETOOTH_CONNECT): Boolean =
-        ActivityCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    private fun hasPermission(): Boolean = BluetoothPermissionCompat.connectGranted(context)
 }

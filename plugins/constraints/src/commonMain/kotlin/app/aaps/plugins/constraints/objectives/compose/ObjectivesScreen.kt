@@ -69,6 +69,7 @@ fun ObjectivesScreen(
     state: ObjectivesUiState,
     onFakeModeToggle: (Boolean) -> Unit,
     onReset: () -> Unit,
+    onLearnAll: () -> Unit,
     onStart: (Int) -> Unit,
     onVerify: (Int) -> Unit,
     onRequestUnstart: (Int) -> Unit,
@@ -94,7 +95,8 @@ fun ObjectivesScreen(
             DebugControls(
                 isFakeMode = state.isFakeMode,
                 onFakeModeToggle = onFakeModeToggle,
-                onReset = onReset
+                onReset = onReset,
+                onLearnAll = onLearnAll
             )
         }
 
@@ -131,7 +133,8 @@ fun ObjectivesScreen(
 private fun DebugControls(
     isFakeMode: Boolean,
     onFakeModeToggle: (Boolean) -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onLearnAll: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -154,14 +157,27 @@ private fun DebugControls(
                 style = MaterialTheme.typography.bodyMedium
             )
         }
-        OutlinedButton(onClick = onReset) {
-            Icon(
-                imageVector = Icons.Default.RestartAlt,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("Reset")
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(onClick = onLearnAll) {
+                Icon(
+                    imageVector = Icons.Default.School,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Learn all")
+            }
+            OutlinedButton(onClick = onReset) {
+                Icon(
+                    imageVector = Icons.Default.RestartAlt,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Reset")
+            }
         }
     }
     HorizontalDivider()

@@ -24,8 +24,12 @@ object BoostStepSensor {
 
     private val registered = AtomicBoolean(false)
 
-    fun register(context: Context, aapsLogger: AAPSLogger) {
+    fun register(context: Context, aapsLogger: AAPSLogger, enabled: Boolean = true) {
         if (registered.get()) return
+        if (!enabled) {
+            aapsLogger.debug(LTag.APS, "Phone step counting disabled in Boost settings — step counter not registered")
+            return
+        }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED

@@ -2,6 +2,7 @@ package info.nightscout.pump.combov2
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.annotation.VisibleForTesting
 import app.aaps.core.data.model.BS
 import app.aaps.core.data.model.TE
@@ -143,6 +144,12 @@ internal fun millisUntilNextHour(now: DateTime): Long {
     val millisIntoHour = now.minuteOfHour().get() * 60_000L + now.secondOfMinute().get() * 1000L + now.millisOfSecond().get()
     return (60 * 60_000L - millisIntoHour).coerceAtLeast(1L)
 }
+
+private fun bluetoothPermissionsForSdk(): List<String> =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        listOf("android.permission.BLUETOOTH_CONNECT", "android.permission.BLUETOOTH_SCAN")
+    else
+        listOf("android.permission.BLUETOOTH", "android.permission.ACCESS_FINE_LOCATION")
 
 @ContributesIntoMap(AppScope::class, binding = binding<PluginBase>())
 @PumpDriver
@@ -348,7 +355,7 @@ class ComboV2Plugin(
             try {
                 runWithPermissionCheck(
                     context, config, aapsLogger,
-                    permissionsToCheckFor = listOf("android.permission.BLUETOOTH_CONNECT")
+                    permissionsToCheckFor = bluetoothPermissionsForSdk()
                 ) {
                     aapsLogger.debug(LTag.PUMP, "Setting up bluetooth interface")
 
@@ -672,7 +679,7 @@ class ComboV2Plugin(
                 try {
                     runWithPermissionCheck(
                         context, config, aapsLogger,
-                        permissionsToCheckFor = listOf("android.permission.BLUETOOTH_CONNECT")
+                        permissionsToCheckFor = bluetoothPermissionsForSdk()
                     ) {
                         // Set maxNumAttempts to null to turn off the connection attempt limit inside the connect() call.
                         // The AAPS queue thread will anyway cause the connectionSetupJob to be canceled when its
@@ -1606,7 +1613,7 @@ class ComboV2Plugin(
                 // since pairing requires Bluetooth permissions.
                 val pairingResult = runWithPermissionCheck(
                     context, config, aapsLogger,
-                    permissionsToCheckFor = listOf("android.permission.BLUETOOTH_CONNECT")
+                    permissionsToCheckFor = bluetoothPermissionsForSdk()
                 ) {
                     try {
                         pumpManager?.pairWithNewPump(discoveryDuration) { newPumpAddress, previousAttemptFailed ->

@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.text.format.DateFormat
@@ -217,7 +218,8 @@ abstract class BaseWatchFace : WatchFace() {
         super.onCreate()
         simpleUi.onCreate(::forceUpdate)
         val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        val bounds = windowManager.currentWindowMetrics.bounds
+        val bounds = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) windowManager.currentWindowMetrics.bounds
+        else Rect(0, 0, resources.displayMetrics.widthPixels, resources.displayMetrics.heightPixels)
         displayWidth = bounds.width()
         displayHeight = bounds.height()
         specW = View.MeasureSpec.makeMeasureSpec(displayWidth, View.MeasureSpec.EXACTLY)
@@ -443,7 +445,11 @@ abstract class BaseWatchFace : WatchFace() {
      */
     protected val canvasWidth: Int
         get() = if (displayWidth > 0) displayWidth
-        else (getSystemService(WINDOW_SERVICE) as WindowManager).currentWindowMetrics.bounds.width()
+        else {
+            val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) windowManager.currentWindowMetrics.bounds.width()
+            else resources.displayMetrics.widthPixels
+        }
 
     /**
      * True when this instance exists only to draw into a [Bitmap] and is not, and never will be, a

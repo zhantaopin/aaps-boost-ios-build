@@ -5,6 +5,12 @@
     <string name="description_no_calibration">"No calibration override applied. Sensor values are used as-is. Use this when the sensor is already factory-calibrated and accurate."</string>
     <string name="linear_calibration_name">Linear calibration</string>
     <string name="description_linear_calibration">"Per-sensor linear calibration override (slope and offset) computed from your fingerstick entries. Recent entries are weighted higher. Override is applied after the current sensor session start; first 2 hours are skipped as warm-up."</string>
+    <string name="fixed_offset_name">Fixed offset</string>
+    <string name="description_fixed_offset">Adds a single constant mg/dL offset to every CGM reading before it enters the database. Use this when your sensor is consistently off by a known amount (±36 mg/dL, ≈±2.0 mmol/L). Switching back to No calibration or Linear calibration silences the offset immediately.</string>
+    <string name="fixed_offset_hint">Current offset: %1$s. Applied to every CGM reading while this calibration plugin is active.</string>
+    <string name="fixed_offset_quick_minus">-1 mmol</string>
+    <string name="fixed_offset_quick_zero">Zero</string>
+    <string name="fixed_offset_quick_plus">+1 mmol</string>
     <string name="sensor_change_detected_text">Possible sensor change detected at %1$s. Mark as new sensor?</string>
     <string name="sensor_change_detected_action">Mark sensor change</string>
 

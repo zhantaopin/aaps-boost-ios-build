@@ -14,6 +14,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.NotificationManager
+import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.resources.ResourceHelper
@@ -75,7 +76,9 @@ class MM640gPlugin(
         fabricPrivacy: FabricPrivacy,
         private val mM640gPlugin: MM640gPlugin,
         private val dateUtil: DateUtil,
-        private val persistenceLayer: PersistenceLayer
+        private val persistenceLayer: PersistenceLayer,
+        private val activePlugin: ActivePlugin,
+        private val preferences: Preferences
     ) : LoggingWorker(context, params, Dispatchers.IO, aapsLogger, fabricPrivacy) {
 
         /**
@@ -104,15 +107,17 @@ class MM640gPlugin(
                         for (i in 0 until jsonArray.length()) {
                             val jsonObject = jsonArray.getJSONObject(i)
                             when (val type = jsonObject.getString("type")) {
-                                "sgv" ->
+                                "sgv" -> {
+                                    val sgvRaw = jsonObject.getDouble("sgv")
                                     glucoseValues += GV(
                                         timestamp = jsonObject.getLong("date"),
-                                        value = jsonObject.getDouble("sgv"),
+                                        value = applyUserOffset(sgvRaw, preferences, activePlugin),
                                         raw = null,
                                         noise = null,
                                         trendArrow = TrendArrow.fromString(jsonObject.getString("direction")),
                                         sourceSensor = SourceSensor.MM_600_SERIES
                                     )
+                                }
 
                                 else  -> aapsLogger.debug(LTag.BGSOURCE, "Unknown entries type: $type")
                             }

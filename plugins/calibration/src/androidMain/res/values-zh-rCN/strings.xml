@@ -4,6 +4,12 @@
     <string name="description_no_calibration">"未应用校准覆盖。传感器数值按原样使用。当传感器已出厂校准且准确时，请使用此选项。"</string>
     <string name="linear_calibration_name">线性校准</string>
     <string name="description_linear_calibration">"基于您的指血录入值计算的逐传感器线性校准覆盖（斜率与偏移）。较新的录入值权重更高。覆盖在当前传感器会话开始后应用；前2小时作为预热期被跳过。"</string>
+    <string name="fixed_offset_name">固定偏移</string>
+    <string name="description_fixed_offset">为每条 CGM 读数在写入数据库前加上固定的 mg/dL 偏移量。当您的传感器持续存在已知的固定偏差时使用（±36 mg/dL，≈±2.0 mmol/L）。切换回"无需校准"或"线性校准"会立即停止偏移。</string>
+    <string name="fixed_offset_hint">当前偏移量：%1$s。此校准插件激活期间，会应用到每条 CGM 读数。</string>
+    <string name="fixed_offset_quick_minus">-1 mmol</string>
+    <string name="fixed_offset_quick_zero">归零</string>
+    <string name="fixed_offset_quick_plus">+1 mmol</string>
     <string name="sensor_change_detected_text">在 %1$s 检测到可能的传感器更换。是否标记为新传感器？</string>
     <string name="sensor_change_detected_action">标记传感器更换</string>
     <!-- Calibration management screen -->

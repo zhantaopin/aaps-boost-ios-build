@@ -105,7 +105,9 @@ class WatchfaceConfigurationActivity : WearPreferenceActivity(), SharedPreferenc
         if (key == getString(R.string.key_heart_rate_sampling) && sp.getBoolean(key, false))
             requestBodySensorPermission()
         if (key == getString(R.string.key_steps_sampling)) {
-            if (sp.getBoolean(key, false)) {
+            // ACTIVITY_RECOGNITION only exists from Android 10; below Q the step counter needs no
+            // permission, so there is nothing to request.
+            if (sp.getBoolean(key, false) && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                 // Check if the permission is already granted, if not, request it
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_DENIED) {
                     ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACTIVITY_RECOGNITION), PHYSICAL_ACTIVITY)

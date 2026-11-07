@@ -1,6 +1,11 @@
 package app.aaps.core.data.model
 
-fun SourceSensor.advancedFilteringSupported(): Boolean = this in ADVANCED_FILTERING_SENSORS
+// SMB (super micro bolus) was previously whitelisted to a known-good subset of CGM sensors.
+// All modern CGMs (Dexcom, Libre, Medtronic Guardian) do factory filtering that is already
+// stronger than the historical OpenAPS assumption, and the few legacy sensors we had on the
+// whitelist are still supported by needsFlatBgCheck() below. Returning true lets every source
+// opt into advanced filtering — the safety edge is in the flat BG check, not the brand name.
+fun SourceSensor.advancedFilteringSupported(): Boolean = true
 
 /**
  * True when a long flat line from this source can mean a stuck sensor and not a steady glucose, so
@@ -13,18 +18,6 @@ fun SourceSensor.advancedFilteringSupported(): Boolean = this in ADVANCED_FILTER
  * repeated value is possible, so it keeps the check as well.
  */
 fun SourceSensor.needsFlatBgCheck(): Boolean = this in FLAT_BG_CHECK_SENSORS
-
-private val ADVANCED_FILTERING_SENSORS = setOf(
-    // Every Dexcom sensor still sold filters internally. This covers the Share link too, where the
-    // model is not known but the vendor is.
-    SourceSensor.DEXCOM_UNKNOWN,
-    SourceSensor.DEXCOM_G6,
-    SourceSensor.DEXCOM_G7,
-    SourceSensor.LIBRE_2,
-    SourceSensor.LIBRE_3,
-    SourceSensor.SYAI_TAG,
-    SourceSensor.RANDOM,
-)
 
 private val FLAT_BG_CHECK_SENSORS = setOf(
     SourceSensor.LIBRE_1,

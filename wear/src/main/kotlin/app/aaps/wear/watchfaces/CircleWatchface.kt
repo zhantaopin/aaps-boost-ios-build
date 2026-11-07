@@ -5,7 +5,9 @@ import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
+import android.os.Build
 import android.os.PowerManager
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -101,7 +103,8 @@ class CircleWatchface : WatchFace() {
         val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AAPS:CircleWatchface")
         wakeLock.acquire(30000)
         val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        val bounds = windowManager.currentWindowMetrics.bounds
+        val bounds = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) windowManager.currentWindowMetrics.bounds
+        else Rect(0, 0, resources.displayMetrics.widthPixels, resources.displayMetrics.heightPixels)
         displayWidth = bounds.width()
         displayHeight = bounds.height()
         specW = View.MeasureSpec.makeMeasureSpec(displayWidth, View.MeasureSpec.EXACTLY)

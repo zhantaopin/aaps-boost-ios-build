@@ -1,10 +1,10 @@
 package app.aaps.persistentNotification
 
-import android.app.ForegroundServiceStartNotAllowedException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import app.aaps.core.interfaces.logging.AAPSLogger
@@ -62,8 +62,12 @@ class DummyServiceHelper(
                     // This is the key: Without waiting Android Framework to call this method
                     // inside Service.onCreate(), immediately call here to post the notification.
                     dummyService.startForeground(notificationHolder.notificationID, notificationHolder.notification)
-                } catch (e: ForegroundServiceStartNotAllowedException) {
-                    notAllowed(e, onNotAllowed)
+                } catch (e: RuntimeException) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is android.app.ForegroundServiceStartNotAllowedException) {
+                        notAllowed(e.message ?: "foreground start not allowed", onNotAllowed)
+                    } else {
+                        aapsLogger.warn(LTag.CORE, "Failed to start DummyService foreground: ${e.message}")
+                    }
                 } finally {
                     // Release the connection to prevent leaks.
                     context.unbindService(this)
@@ -83,8 +87,12 @@ class DummyServiceHelper(
             // this case.
             try {
                 context.startForegroundService(Intent(context, DummyService::class.java))
-            } catch (e: ForegroundServiceStartNotAllowedException) {
-                notAllowed(e, onNotAllowed)
+            } catch (e: RuntimeException) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is android.app.ForegroundServiceStartNotAllowedException) {
+                    notAllowed(e.message ?: "foreground start not allowed", onNotAllowed)
+                } else {
+                    aapsLogger.warn(LTag.CORE, "Failed to start DummyService foreground: ${e.message}")
+                }
             }
         }
     }
@@ -93,8 +101,8 @@ class DummyServiceHelper(
         context.stopService(Intent(context, DummyService::class.java))
     }
 
-    private fun notAllowed(e: ForegroundServiceStartNotAllowedException, onNotAllowed: () -> Unit) {
-        aapsLogger.warn(LTag.CORE, "Android does not allow DummyService into the foreground now: ${e.message}")
+    private fun notAllowed(message: String, onNotAllowed: () -> Unit) {
+        aapsLogger.warn(LTag.CORE, "Android does not allow DummyService into the foreground now: $message")
         onNotAllowed()
     }
 }

@@ -97,4 +97,6 @@
     <!--    autoISF -->
     <string name="autoISF_settings_title">自动 ISF（胰岛素敏感系数）设置</string>
     <string name="smb_delivery_settings_title">SMB（微型大剂量）输注设置</string>
+    <string name="boost_permission_body_sensors_title">心率</string>
+    <string name="boost_permission_body_sensors_description">Boost 会采样本机的心率传感器，用于改进睡眠检测，并在开启后用于运动分类。</string>
 </resources>

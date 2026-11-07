@@ -22,6 +22,16 @@
         </encoder>
     </appender>
 
+    <!-- Async wrapper so pump/loop/ble threads are not blocked by synchronous disk writes.
+         neverBlock=true + queue 4096: under pressure we drop the tail of the log, never the cycle. -->
+    <appender name="async_file" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>4096</queueSize>
+        <neverBlock>true</neverBlock>
+        <includeCallerData>false</includeCallerData>
+        <discardingThreshold>0</discardingThreshold>
+        <appender-ref ref="file" />
+    </appender>
+
     <appender name="logcat" class="ch.qos.logback.classic.android.LogcatAppender">
         <tagEncoder>
             <pattern>%logger{0}</pattern>
@@ -33,7 +43,7 @@
 
     <!-- Write INFO (and higher-level) messages to the log file -->
     <root level="DEBUG">
-        <appender-ref ref="file" />
+        <appender-ref ref="async_file" />
         <appender-ref ref="logcat" />
     </root>
 </configuration>

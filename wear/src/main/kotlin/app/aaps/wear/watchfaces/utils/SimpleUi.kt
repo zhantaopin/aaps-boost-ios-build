@@ -7,8 +7,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.BatteryManager
+import android.os.Build
 import android.view.WindowManager
 import androidx.core.content.ContextCompat
 import app.aaps.core.interfaces.rx.weardata.EventData
@@ -40,7 +42,8 @@ class SimpleUi(
     fun onCreate(callback: () -> Unit) {
         this.callback = callback
         val windowManager = context.getSystemService(WINDOW_SERVICE) as WindowManager
-        val bounds = windowManager.currentWindowMetrics.bounds
+        val bounds = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) windowManager.currentWindowMetrics.bounds
+        else Rect(0, 0, context.resources.displayMetrics.widthPixels, context.resources.displayMetrics.heightPixels)
         displayWidth = bounds.width()
         displayHeight = bounds.height()
         setupBatteryReceiver()

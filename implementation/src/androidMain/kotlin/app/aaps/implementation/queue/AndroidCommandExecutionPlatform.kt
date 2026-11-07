@@ -5,7 +5,7 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.PowerManager
-import androidx.core.content.ContextCompat
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import app.aaps.core.utils.extensions.safeDisable
 import app.aaps.core.utils.extensions.safeEnable
 import dev.zacsweers.metro.AppScope
@@ -41,8 +41,7 @@ class AndroidCommandExecutionPlatform(
     }
 
     override fun hasBluetoothPermission(): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
+        BluetoothPermissionCompat.connectGranted(context) && BluetoothPermissionCompat.scanGranted(context)
 
     override val canRestartBluetooth: Boolean get() = true
 

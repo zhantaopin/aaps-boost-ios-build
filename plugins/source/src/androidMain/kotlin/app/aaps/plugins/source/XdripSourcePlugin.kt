@@ -17,6 +17,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.NotificationManager
+import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.receivers.Intents
@@ -92,7 +93,8 @@ class XdripSourcePlugin(
         private val persistenceLayer: PersistenceLayer,
         private val preferences: Preferences,
         private val dateUtil: DateUtil,
-        private val dataInbox: DataInbox
+        private val dataInbox: DataInbox,
+        private val activePlugin: ActivePlugin
     ) : LoggingWorker(context, params, Dispatchers.IO, aapsLogger, fabricPrivacy) {
 
         /**
@@ -155,10 +157,12 @@ class XdripSourcePlugin(
 
         private suspend fun processBundle(bundle: Bundle) {
             aapsLogger.debug(LTag.BGSOURCE, "Received xDrip data: $bundle")
+            val bgRaw = round(bundle.getDouble(Intents.EXTRA_BG_ESTIMATE, 0.0))
+            val bgFinal = applyUserOffset(bgRaw, preferences, activePlugin)
             val glucoseValues = mutableListOf<GV>()
             glucoseValues += GV(
                 timestamp = bundle.getLong(Intents.EXTRA_TIMESTAMP, 0),
-                value = round(bundle.getDouble(Intents.EXTRA_BG_ESTIMATE, 0.0)),
+                value = bgFinal,
                 raw = round(bundle.getDouble(Intents.EXTRA_RAW, 0.0)),
                 noise = null,
                 trendArrow = TrendArrow.fromString(bundle.getString(Intents.EXTRA_BG_SLOPE_NAME)),

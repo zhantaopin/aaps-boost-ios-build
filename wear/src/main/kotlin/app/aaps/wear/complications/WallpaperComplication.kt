@@ -2,7 +2,9 @@ package app.aaps.wear.complications
 
 import android.app.PendingIntent
 import android.graphics.BitmapFactory
+import android.graphics.Rect
 import android.graphics.drawable.Icon
+import android.os.Build
 import android.view.WindowManager
 import androidx.core.graphics.scale
 import androidx.wear.watchface.complications.data.ComplicationData
@@ -34,7 +36,8 @@ abstract class WallpaperComplication : ModernBaseComplicationProviderService() {
         return when (type) {
             ComplicationType.PHOTO_IMAGE      -> {
                 val windowManager = applicationContext.getSystemService(WINDOW_SERVICE) as WindowManager
-                val bounds = windowManager.currentWindowMetrics.bounds
+                val bounds = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) windowManager.currentWindowMetrics.bounds
+                else Rect(0, 0, resources.displayMetrics.widthPixels, resources.displayMetrics.heightPixels)
                 val width = bounds.width()
                 val height = bounds.height()
                 val assetManager = assets

@@ -20,6 +20,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.NotificationManager
+import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PermissionGroup
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
@@ -128,7 +129,8 @@ class DexcomPlugin(
         private val dateUtil: DateUtil,
         private val dataInbox: DataInbox,
         private val persistenceLayer: PersistenceLayer,
-        private val profileUtil: ProfileUtil
+        private val profileUtil: ProfileUtil,
+        private val activePlugin: ActivePlugin
     ) : LoggingWorker(context, params, Dispatchers.IO, aapsLogger, fabricPrivacy) {
 
         /**
@@ -217,15 +219,17 @@ class DexcomPlugin(
                 // G6 is sending one 24h old changed value causing recalculation. Ignore
                 if (sourceSensor == SourceSensor.DEXCOM_G6)
                     if ((now - timestamp) > T.hours(20).msecs()) valid = false
-                if (valid)
+                if (valid) {
+                    val bgRaw = glucoseValueBundle.getInt("glucoseValue").toDouble()
                     glucoseValues += GV(
                         timestamp = timestamp,
-                        value = glucoseValueBundle.getInt("glucoseValue").toDouble(),
+                        value = applyUserOffset(bgRaw, preferences, activePlugin),
                         noise = null,
                         raw = null,
                         trendArrow = TrendArrow.fromString(glucoseValueBundle.getString("trendArrow")!!),
                         sourceSensor = sourceSensor
                     )
+                }
             }
             var sensorStartTime = if (preferences.get(BooleanKey.BgSourceCreateSensorChange) && bundle.containsKey("sensorInsertionTime")) {
                 bundle.getLong("sensorInsertionTime", 0) * 1000

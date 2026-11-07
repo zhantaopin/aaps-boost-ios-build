@@ -1,6 +1,5 @@
 package app.aaps.pump.carelevo.ble
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -16,13 +15,12 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.ParcelUuid
 import android.os.SystemClock
-import androidx.core.app.ActivityCompat
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import app.aaps.core.interfaces.pump.ble.BleAdapter
 import app.aaps.core.interfaces.pump.ble.BleGatt
 import app.aaps.core.interfaces.pump.ble.BleScanner
@@ -161,24 +159,24 @@ class CarelevoBleTransportImpl @Inject constructor(
         }
 
         override fun getDeviceName(address: String): String? {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return null
+            if (!hasPermissionConnect()) return null
             return bluetoothAdapter?.getRemoteDevice(address)?.name
         }
 
         override fun isDeviceBonded(address: String): Boolean {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return false
+            if (!hasPermissionConnect()) return false
             val device = bluetoothAdapter?.getRemoteDevice(address) ?: return false
             return device.bondState == BluetoothDevice.BOND_BONDED
         }
 
         override fun createBond(address: String): Boolean {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return false
+            if (!hasPermissionConnect()) return false
             val device = bluetoothAdapter?.getRemoteDevice(address) ?: return false
             return device.createBond()
         }
 
         override fun removeBond(address: String) {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return
+            if (!hasPermissionConnect()) return
             try {
                 val pairedDevices = bluetoothAdapter?.bondedDevices ?: return
                 for (device in pairedDevices) {
@@ -202,7 +200,7 @@ class CarelevoBleTransportImpl @Inject constructor(
         override val scannedDevices: SharedFlow<ScannedDevice> = _scannedDevices
 
         override fun startScan() {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_SCAN)) return
+            if (!hasPermissionScan()) return
 
             scanCallback = object : ScanCallback() {
                 override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -261,7 +259,7 @@ class CarelevoBleTransportImpl @Inject constructor(
     private inner class CarelevoGattImpl : BleGatt {
 
         override fun connect(address: String): Boolean {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) return false
+            if (!hasPermissionConnect()) return false
             val device = bluetoothAdapter?.getRemoteDevice(address) ?: return false
             // Release any previous client before opening a new one. Android caps concurrent GATT
             // client interfaces; leaking them (connectGatt without close) leads to status 133 and
@@ -340,8 +338,8 @@ class CarelevoBleTransportImpl @Inject constructor(
         }
     }
 
-    private fun hasPermission(permission: String): Boolean =
-        ActivityCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    private fun hasPermissionConnect(): Boolean = BluetoothPermissionCompat.connectGranted(context)
+    private fun hasPermissionScan(): Boolean = BluetoothPermissionCompat.scanGranted(context)
 
     private companion object {
 

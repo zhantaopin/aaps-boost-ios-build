@@ -1,5 +1,6 @@
 package app.aaps.wear.complications
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.os.Build
 import androidx.annotation.VisibleForTesting
@@ -21,6 +22,9 @@ import app.aaps.wear.data.ComplicationData as ComplicationStore
  */
 class TirWeightedComplication : ModernBaseComplicationProviderService() {
 
+    // WEIGHTED_ELEMENTS is a constant of the bundled androidx library, not a platform API; the type
+    // itself is only ever requested on API 33+ (guarded below), so the reference is safe on API 27.
+    @SuppressLint("NewApi")
     override fun buildComplicationData(
         type: ComplicationType,
         data: ComplicationStore,

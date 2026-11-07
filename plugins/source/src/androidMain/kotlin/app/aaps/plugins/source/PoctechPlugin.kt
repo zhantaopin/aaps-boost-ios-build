@@ -16,6 +16,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.NotificationManager
+import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.resources.ResourceHelper
@@ -76,7 +77,9 @@ class PoctechPlugin(
         aapsLogger: AAPSLogger,
         fabricPrivacy: FabricPrivacy,
         private val poctechPlugin: PoctechPlugin,
-        private val persistenceLayer: PersistenceLayer
+        private val persistenceLayer: PersistenceLayer,
+        private val activePlugin: ActivePlugin,
+        private val preferences: Preferences
     ) : LoggingWorker(context, params, Dispatchers.IO, aapsLogger, fabricPrivacy) {
 
         /**
@@ -101,10 +104,11 @@ class PoctechPlugin(
                 aapsLogger.debug(LTag.BGSOURCE, "Received Poctech Data size:" + jsonArray.length())
                 for (i in 0 until jsonArray.length()) {
                     val json = jsonArray.getJSONObject(i)
+                    val bgRaw = if (safeGetString(json, "units", GlucoseUnit.MGDL.asText) == "mmol/L") json.getDouble("current") * Constants.MMOLL_TO_MGDL
+                        else json.getDouble("current")
                     glucoseValues += GV(
                         timestamp = json.getLong("date"),
-                        value = if (safeGetString(json, "units", GlucoseUnit.MGDL.asText) == "mmol/L") json.getDouble("current") * Constants.MMOLL_TO_MGDL
-                        else json.getDouble("current"),
+                        value = applyUserOffset(bgRaw, preferences, activePlugin),
                         raw = null,
                         noise = null,
                         trendArrow = TrendArrow.fromString(json.getString("direction")),

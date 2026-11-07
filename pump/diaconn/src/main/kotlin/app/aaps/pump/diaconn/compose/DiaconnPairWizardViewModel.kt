@@ -1,6 +1,5 @@
 package app.aaps.pump.diaconn.compose
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
@@ -8,13 +7,12 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.ParcelUuid
 import androidx.compose.runtime.Stable
-import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.pump.BluetoothPermissionCompat
 import app.aaps.core.interfaces.pump.ble.ScannedDevice
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.keys.interfaces.Preferences
@@ -88,8 +86,8 @@ class DiaconnPairWizardViewModel(
     fun startScan() {
         aapsLogger.debug(LTag.PUMP, "DiaconnPairWizard: startScan")
         // Without the permission Android throws a SecurityException, and the app ends
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-            aapsLogger.error(LTag.PUMP, "DiaconnPairWizard: BLUETOOTH_SCAN permission missing, no scan")
+        if (!BluetoothPermissionCompat.scanGranted(context)) {
+            aapsLogger.error(LTag.PUMP, "DiaconnPairWizard: scan permission missing, no scan")
             return
         }
         try {
