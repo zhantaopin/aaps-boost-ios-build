@@ -41,6 +41,21 @@ interface CloudStorageProvider {
      */
     val reAuthRequiredText: TextRef
 
+    /**
+     * Text shown under the provider name in the storage picker.
+     *
+     * The default is empty so older providers and test doubles do not need to change.
+     */
+    val descriptionText: TextRef
+        get() = TextRef.Literal("")
+
+    /**
+     * How the user connects this provider. OAuth providers start a browser sign in; user-name and
+     * password providers ask for credentials in the app.
+     */
+    val authKind: CloudAuthKind
+        get() = CloudAuthKind.OAUTH
+
     // ==================== Authentication ====================
 
     /**

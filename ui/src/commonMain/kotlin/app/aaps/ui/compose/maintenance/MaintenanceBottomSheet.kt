@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Delete
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import app.aaps.core.interfaces.logging.LogLevel
 import app.aaps.core.interfaces.maintenance.ExportConfig
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.TonalIcon
@@ -49,6 +51,8 @@ import app.aaps.core.ui.compose.stringResource
 fun MaintenanceBottomSheet(
     onDismiss: () -> Unit,
     onLogSettingsClick: () -> Unit,
+    logLevel: LogLevel,
+    onLogLevelClick: () -> Unit,
     onSendLogsClick: () -> Unit,
     onDeleteLogsClick: () -> Unit,
     onDirectoryClick: () -> Unit,
@@ -80,6 +84,8 @@ fun MaintenanceBottomSheet(
         MaintenanceBottomSheetContent(
             onDismiss = onDismiss,
             onLogSettingsClick = onLogSettingsClick,
+            logLevel = logLevel,
+            onLogLevelClick = onLogLevelClick,
             onSendLogsClick = onSendLogsClick,
             onDeleteLogsClick = onDeleteLogsClick,
             onDirectoryClick = onDirectoryClick,
@@ -111,6 +117,8 @@ fun MaintenanceBottomSheet(
 internal fun MaintenanceBottomSheetContent(
     onDismiss: () -> Unit = {},
     onLogSettingsClick: () -> Unit = {},
+    logLevel: LogLevel = LogLevel.INFO,
+    onLogLevelClick: () -> Unit = {},
     onSendLogsClick: () -> Unit = {},
     onDeleteLogsClick: () -> Unit = {},
     onDirectoryClick: () -> Unit = {},
@@ -146,20 +154,36 @@ internal fun MaintenanceBottomSheetContent(
         // Section: Log Files
         SectionHeader(stringResource(CoreUiStrings.log_files))
 
+        // These two keep the sheet open and open their surface on top of it. Closing the sheet here
+        // would send the Boost overview's "return after maintenance" navigation on its way, tearing
+        // this screen down before the follow-up surface could be composed anywhere.
         MaintenanceItem(
             text = stringResource(CoreUiStrings.nav_logsettings),
             description = stringResource(CoreUiStrings.maintenance_log_settings_desc),
             icon = Icons.Default.Settings,
             color = primaryColor,
-            onDismiss = onDismiss,
+            onDismiss = {},
             onClick = onLogSettingsClick
+        )
+        // How much is written at all. Sits next to "Log settings", which only picks tags inside the
+        // level chosen here: OFF means nothing reaches the file or logcat, whatever the tags say.
+        MaintenanceItem(
+            text = stringResource(CoreUiStrings.log_level),
+            description = logLevelLabel(logLevel),
+            icon = Icons.Default.BugReport,
+            color = primaryColor,
+            onDismiss = {},
+            onClick = onLogLevelClick
         )
         MaintenanceItem(
             text = stringResource(CoreUiStrings.send_logs),
             description = stringResource(CoreUiStrings.maintenance_send_logs_desc),
             icon = Icons.AutoMirrored.Filled.Send,
             color = primaryColor,
-            onDismiss = onDismiss,
+            // Rows that open a confirmation dialog or a further sheet keep this one open underneath:
+            // closing it would let the Boost overview's "return after maintenance" navigation tear
+            // the follow-up down before it is drawn. The visit ends when the user closes the sheet.
+            onDismiss = {},
             onClick = onSendLogsClick,
             trailingContent = exportConfig?.let {
                 {
@@ -209,7 +233,7 @@ internal fun MaintenanceBottomSheetContent(
             description = stringResource(CoreUiStrings.maintenance_cloud_directory_desc),
             icon = Icons.Default.Cloud,
             color = primaryColor,
-            onDismiss = onDismiss,
+            onDismiss = {},
             onClick = onCloudDirectoryClick,
             leadingContent = {
                 CloudStatusIcon(
@@ -236,7 +260,7 @@ internal fun MaintenanceBottomSheetContent(
             description = stringResource(CoreUiStrings.maintenance_export_desc),
             icon = Icons.Default.FileUpload,
             color = primaryColor,
-            onDismiss = onDismiss,
+            onDismiss = {},
             onClick = onExportSettingsClick,
             trailingContent = exportConfig?.let {
                 {
@@ -283,7 +307,7 @@ internal fun MaintenanceBottomSheetContent(
             description = stringResource(CoreUiStrings.maintenance_export_csv_desc),
             icon = Icons.Default.TableChart,
             color = primaryColor,
-            onDismiss = onDismiss,
+            onDismiss = {},
             onClick = onExportCsvClick,
             trailingContent = exportConfig?.let {
                 {
@@ -308,7 +332,7 @@ internal fun MaintenanceBottomSheetContent(
             description = stringResource(CoreUiStrings.maintenance_cleanup_db_desc),
             icon = Icons.Default.Delete,
             color = primaryColor,
-            onDismiss = onDismiss,
+            onDismiss = {},
             onClick = onCleanupDbClick
         )
         MaintenanceItem(
@@ -316,7 +340,7 @@ internal fun MaintenanceBottomSheetContent(
             description = stringResource(CoreUiStrings.maintenance_reset_aps_results_desc),
             icon = Icons.Default.DeleteForever,
             color = primaryColor,
-            onDismiss = onDismiss,
+            onDismiss = {},
             onClick = onResetApsResultsClick,
             danger = true
         )
@@ -325,7 +349,7 @@ internal fun MaintenanceBottomSheetContent(
             description = stringResource(CoreUiStrings.maintenance_reset_db_desc),
             icon = Icons.Default.DeleteForever,
             color = primaryColor,
-            onDismiss = onDismiss,
+            onDismiss = {},
             onClick = onResetDbClick,
             danger = true
         )

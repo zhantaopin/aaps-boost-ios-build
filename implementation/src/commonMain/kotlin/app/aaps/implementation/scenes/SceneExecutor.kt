@@ -268,11 +268,18 @@ class SceneExecutor(
             )
         )
 
-        val allSuccess = actionResults.all { it.success }
+        // The scene is active either way: activation applies what it can and keeps running. The failure
+        // report therefore names the actions that did not apply, instead of a generic "some actions failed"
+        // that reads like "nothing was applied" on the client.
+        val failed = actionResults.filter { !it.success }
+        val failedDetail = failed.joinToString("; ") { result ->
+            val why = result.errorMessage?.takeIf { it.isNotBlank() } ?: rh.gs(CoreUiStrings.scene_some_actions_failed)
+            "${sceneActionLine(result.action)}: $why"
+        }
         return SceneExecutionResult(
-            success = allSuccess,
+            success = failed.isEmpty(),
             actionResults = actionResults,
-            errorMessage = if (!allSuccess) rh.gs(CoreUiStrings.scene_some_actions_failed) else null
+            errorMessage = if (failed.isEmpty()) null else rh.gs(CoreUiStrings.scene_partially_applied, failedDetail)
         )
     }
 

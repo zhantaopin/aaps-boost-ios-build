@@ -415,6 +415,7 @@
     <string name="quicklaunch_tt_description" comment="Temp target preset on a QuickLaunch button. %1$s=target with unit, %2$s=duration. Example: 5.0 mmol/L, 45 min">%1$s, %2$s</string>
     <string name="scene_duration_indefinite">无限时长（手动结束）</string>
     <string name="scene_some_actions_failed">部分操作执行失败</string>
+    <string name="scene_partially_applied">已部分应用：%1$s</string>
     <string name="scene_no_active">当前无生效情景</string>
     <string name="scene_some_reverts_failed">部分还原操作执行失败</string>
     <string name="scene_no_profile_store">无可用配置档案库</string>
@@ -911,10 +912,16 @@
     <string name="unattended_settings_export">无人值守设置导出</string>
     <!-- Maintenance bottom sheet descriptions -->
     <string name="maintenance_log_settings_desc">配置日志详细级别</string>
+    <string name="log_level">日志级别</string>
+    <string name="log_level_off">关闭</string>
+    <string name="log_level_warn">仅警告</string>
+    <string name="log_level_info">正常</string>
+    <string name="log_level_debug">调试</string>
+    <string name="log_level_off_warning">关闭后不再输出任何日志：不写日志文件，也不输出到 logcat。</string>
     <string name="maintenance_send_logs_desc">分享故障排除日志文件</string>
     <string name="maintenance_delete_logs_desc">删除旧日志文件</string>
     <string name="maintenance_aaps_directory_desc">选择本地存储文件夹</string>
-    <string name="maintenance_cloud_directory_desc">设置云存储 (Google Drive)</string>
+    <string name="maintenance_cloud_directory_desc">设置云存储 (Google Drive 或 WebDAV)</string>
     <string name="maintenance_export_desc">保存加密设置备份</string>
     <string name="maintenance_import_desc">从备份恢复设置</string>
     <string name="maintenance_export_csv_desc">导出处理历史为电子表格</string>
@@ -981,6 +988,8 @@
     <string name="carousel_move_later" comment="Content description of the button that moves the centred carousel card one position towards the end of the list. Order-relative wording (not left/right) so it stays correct in right-to-left languages.">后移</string>
     <string name="carousel_show_card" comment="Screen-reader label for any control that only reveals more detail about the item next to it - a carousel card that shows its details below, or an info button that opens a tooltip. It never activates or applies anything.">显示详情</string>
     <string name="presets_changed_reorder_aborted">预设已在别处更改。新顺序未保存。</string>
+    <string name="quick_wizard_carbs_must_be_positive">碳水化合物必须大于 0</string>
+    <string name="quick_wizard_insulin_must_be_positive">胰岛素必须大于 0</string>
     <string name="carousel_position" comment="Compact position readout shown between the reorder buttons. %1$d=position of the centred card starting at 1, %2$d=total cards. Example: 3 / 7">%1$d / %2$d</string>
     <string name="carousel_position_description" comment="Spoken form of carousel_position, read out by screen readers after each move. %1$d=position of the centred card starting at 1, %2$d=total cards. Example: Position 3 of 7">位置 %1$d / %2$d</string>
     <string name="status">状态</string>
@@ -1202,4 +1211,24 @@
     <string name="units_years">年</string>
     <string name="prefs_range_title">可视化范围</string>
     <string name="secrets_not_protected">此计算机上未找到系统密钥库。用于保护您的设置以及与主机配对关系的密钥会保存在数据旁边的文件中，因此任何获取您文件副本的人也会同时获得这些密钥。在 Linux 上，请安装并启动密钥环服务（例如 GNOME Keyring 或 KWallet），然后重新启动 AAPS。</string>
+    <!--    Configuration / WebDAV-->
+    <string name="nav_configuration_desc">设置您的配置（CGM、泵等）并启用功能</string>
+    <string name="profile_clone_name" comment="Name of a cloned profile. %1$s=name of the original profile. Example: Normal copy">%1$s 副本</string>
+    <string name="webdav">WebDAV</string>
+    <string name="webdav_server_url">服务器 URL</string>
+    <string name="webdav_username">用户名</string>
+    <string name="webdav_password">密码</string>
+    <string name="webdav_server_url_hint">https://server/remote.php/dav/files/user</string>
+    <string name="webdav_connect">连接</string>
+    <string name="webdav_connecting">正在连接...</string>
+    <string name="webdav_https_only">请使用完整的 HTTPS 地址。</string>
+    <string name="webdav_invalid_url">请输入有效的 HTTPS 服务器地址，且不要包含用户名或查询参数。</string>
+    <string name="webdav_username_required">请输入用户名。</string>
+    <string name="webdav_password_required">请输入此服务器的密码。</string>
+    <string name="webdav_keep_password_hint">留空以保留已保存的密码。</string>
+    <string name="webdav_enter_password_after_change">更改服务器或用户名后，请重新输入密码。</string>
+    <string name="webdav_connect_failed">无法连接 WebDAV。请检查服务器、证书和密码。</string>
+    <string name="webdav_saved">WebDAV 已连接</string>
+    <string name="webdav_use_existing">使用已保存的 WebDAV</string>
+    <string name="webdav_edit">编辑</string>
 </resources>

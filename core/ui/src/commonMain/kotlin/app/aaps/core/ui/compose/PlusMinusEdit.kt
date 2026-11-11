@@ -1,5 +1,7 @@
 package app.aaps.core.ui.compose
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -23,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
@@ -54,6 +57,8 @@ import kotlin.math.roundToInt
  * @param label Spoken name of the value, e.g. "Basal 08:00". Not drawn: the stepper sits in a row
  *   that shows its context next to it, but a screen reader reads the field on its own and heard
  *   only "0.85, edit box" and "decrement" - on every one of 24 basal rows.
+ * @param keypadTitle Short display name drawn in the app's numeric keypad, e.g. "ICR". Not [label]:
+ *   that is a spoken sentence ("Carbs [g] at 08:00") and would wrap the keypad title.
  * @param modifier Modifier for the row container
  */
 @Composable
@@ -66,9 +71,11 @@ fun PlusMinusEdit(
     unitLabel: TextRef? = null,
     enabled: Boolean = true,
     label: String? = null,
+    keypadTitle: String? = null,
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val minValue = valueRange.start
     val maxValue = valueRange.endInclusive
 
@@ -77,6 +84,19 @@ fun PlusMinusEdit(
         mutableStateOf(TextFieldValue(valueFormat.format(value)))
     }
     var isError by remember { mutableStateOf(false) }
+
+    // Old Android watch IMEs neither send Done nor report their window, so there the field is
+    // read-only for the system IME and a tap opens the app's own keypad instead.
+    val useKeypad = legacyImePlatform
+    var showKeypad by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    if (useKeypad) {
+        LaunchedEffect(interactionSource) {
+            interactionSource.interactions.collect { interaction ->
+                if (interaction is PressInteraction.Release && enabled) showKeypad = true
+            }
+        }
+    }
 
     // Sync external value → text when not focused (e.g., +/- buttons or external update).
     LaunchedEffect(value) {
@@ -100,15 +120,21 @@ fun PlusMinusEdit(
         if (label != null) stringResource(CoreUiStrings.a11y_plus_button_description, label, stepText)
         else stringResource(CoreUiStrings.increment)
 
-    fun validateAndCommit(text: String) {
+    fun validateAndCommit(text: String): Double? {
         val cleaned = text.trim().replace(",", ".")
         val parsed = cleaned.toDoubleOrNull()
         if (parsed == null) {
             isError = true
-        } else {
-            isError = false
-            onValueChange(parsed.coerceIn(minValue, maxValue))
+            return null
         }
+        isError = false
+        val coerced = parsed.coerceIn(minValue, maxValue)
+        val newText = valueFormat.format(coerced)
+        if (newText != textFieldValue.text) {
+            textFieldValue = TextFieldValue(newText)
+        }
+        onValueChange(coerced)
+        return coerced
     }
 
     // Flush pending text when leaving composition (back press without tapping Done).
@@ -152,6 +178,8 @@ fun PlusMinusEdit(
             },
             singleLine = true,
             enabled = enabled,
+            readOnly = useKeypad,
+            interactionSource = interactionSource,
             isError = isError,
             trailingIcon = if (resolvedUnitLabel.isNotEmpty()) {
                 { Text(resolvedUnitLabel) }
@@ -164,7 +192,10 @@ fun PlusMinusEdit(
             keyboardActions = KeyboardActions(
                 onDone = {
                     validateAndCommit(textFieldValue.text)
+                    // Drop focus first: on older Android (8.x/9) hide() is ignored while the
+                    // field still owns the IME, and the keyboard would come straight back.
                     focusManager.clearFocus()
+                    keyboardController?.hide()
                 }
             ),
             modifier = Modifier
@@ -194,6 +225,29 @@ fun PlusMinusEdit(
                 modifier = Modifier.size(16.dp)
             )
         }
+    }
+
+    // Older Android: the IME's own check mark only hides the keyboard and sends no Done action,
+    // so the field keeps focus and the keyboard bounces back. Treat that as Done.
+    LegacyImeCloseEffect(isFocused = isFocused) {
+        validateAndCommit(textFieldValue.text)
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
+
+    if (showKeypad) {
+        NumericKeypadDialog(
+            title = keypadTitle,
+            initialText = textFieldValue.text,
+            allowDecimal = step != step.roundToInt().toDouble(),
+            allowNegative = minValue < 0,
+            onConfirm = { newText ->
+                textFieldValue = TextFieldValue(newText)
+                validateAndCommit(newText)
+                showKeypad = false
+            },
+            onDismiss = { showKeypad = false }
+        )
     }
 }
 

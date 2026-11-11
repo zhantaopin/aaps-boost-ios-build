@@ -1,5 +1,6 @@
 package app.aaps.plugins.configuration.setupwizard
 
+import androidx.compose.ui.unit.dp
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.constraints.Objectives
@@ -132,6 +133,18 @@ class SWDefinition(
         return screens
     }
 
+    /**
+     * Called when the user leaves the wizard with Finish (not when closing it).
+     *
+     * A fresh install starts in simple mode. Once the wizard has walked the user through the setup,
+     * the trimmed UI is no longer what they want - leaving simple mode on means a completed setup
+     * still hides most of the app. Skipped on a client, which adopts the master's value via sync;
+     * a local put there would start a client-to-master round-trip.
+     */
+    fun onWizardFinished() {
+        if (!config.AAPSCLIENT) preferences.put(BooleanKey.GeneralSimpleMode, false)
+    }
+
     private fun add(newScreen: SWScreen?): SWDefinition {
         if (newScreen != null) screens.add(newScreen)
         return this
@@ -144,7 +157,13 @@ class SWDefinition(
     private val screenEula
         get() = swScreenProvider().with(ConfigurationStrings.end_user_license_agreement)
             .skippable(false)
-            .add(swInfoTextProvider().label(ConfigurationStrings.end_user_license_agreement_text))
+            .add(
+                swInfoTextProvider().label(ConfigurationStrings.end_user_license_agreement_text)
+                    // On a 454 px watch the license fills the whole viewport and pushes "I UNDERSTAND
+                    // AND AGREE" below the fold, so the page offers only Prev and looks like a dead end.
+                    // Scroll the license inside a capped box so the button always stays visible.
+                    .maxHeight(150.dp)
+            )
             .add(swBreakProvider())
             .add(
                 swButtonProvider()
@@ -425,7 +444,12 @@ class SWDefinition(
 
     private val getScreenObjectives
         get() = swScreenProvider().with(CoreUiStrings.objectives)
-            .skippable(false)
+            // Starting the first objective needs an NTP check. When the time server is unreachable
+            // (a watch with a locked-down network, or a phone behind a firewall that drops UDP 123)
+            // the start fails with a snackbar that is easy to miss and Next is never drawn, which
+            // strands the wizard on its last page. Let the user finish; the objective stays
+            // reachable from the menu and can be started there once the network allows it.
+            .skippable(true)
             .add(swInfoTextProvider().label(ConfigurationStrings.startobjective))
             .add(swBreakProvider())
             .add(swButtonProvider().text(ConfigurationStrings.open_objectives).action { onRunObjectives?.invoke() })

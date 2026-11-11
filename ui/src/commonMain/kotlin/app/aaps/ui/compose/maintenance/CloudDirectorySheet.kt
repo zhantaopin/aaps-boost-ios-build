@@ -22,7 +22,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.aaps.core.interfaces.maintenance.CloudAuthKind
 import app.aaps.core.interfaces.maintenance.CloudDirectoryInfo
+import app.aaps.core.interfaces.maintenance.CloudProviderInfo
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.dialogs.ErrorDialog
 import app.aaps.core.ui.compose.dialogs.OkCancelDialog
@@ -32,11 +34,14 @@ import app.aaps.ui.compose.maintenance.MaintenanceViewModel.CloudDirectoryState
 @Composable
 fun CloudDirectorySheet(
     state: CloudDirectoryState,
-    onConnectGoogleDrive: () -> Unit,
+    onProviderClick: (CloudProviderInfo) -> Unit,
+    onEditWebDav: () -> Unit,
+    onWebDavConnect: (String, String, String) -> Unit,
     onConfirmClear: () -> Unit,
     onCancelClear: () -> Unit,
     onReauthorize: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onDismissWebDav: () -> Unit
 ) {
     when (state) {
         is CloudDirectoryState.Hidden -> { /* nothing */
@@ -45,8 +50,18 @@ fun CloudDirectorySheet(
         is CloudDirectoryState.Shown -> {
             CloudDirectoryDialog(
                 info = state.info,
-                onConnectGoogleDrive = onConnectGoogleDrive,
+                providers = state.providers,
+                onProviderClick = onProviderClick,
+                onEditWebDav = onEditWebDav,
                 onDismiss = onDismiss
+            )
+        }
+
+        is CloudDirectoryState.WebDavSetup -> {
+            WebDavSetupDialog(
+                state = state,
+                onConnect = onWebDavConnect,
+                onDismiss = onDismissWebDav
             )
         }
 
@@ -74,7 +89,9 @@ fun CloudDirectorySheet(
 @Composable
 private fun CloudDirectoryDialog(
     info: CloudDirectoryInfo,
-    onConnectGoogleDrive: () -> Unit,
+    providers: List<CloudProviderInfo>,
+    onProviderClick: (CloudProviderInfo) -> Unit,
+    onEditWebDav: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -87,70 +104,15 @@ private fun CloudDirectoryDialog(
         },
         text = {
             Column {
-                // Google Drive row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onConnectGoogleDrive() }
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = info.providerIcon,
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = info.providerDisplayName,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            text = info.providerDescription,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    RadioButton(
-                        selected = info.isCloudActive,
-                        onClick = { onConnectGoogleDrive() }
+                providers.forEach { provider ->
+                    ProviderRow(
+                        provider = provider,
+                        onClick = { onProviderClick(provider) },
+                        onEdit = onEditWebDav
                     )
                 }
-
-                // Authorization status section
-                if (info.hasCredentials) {
+                if (info.isCloudActive) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(CoreUiStrings.authorization_status),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        val statusColor = if (info.hasConnectionError)
-                            MaterialTheme.colorScheme.error
-                        else
-                            MaterialTheme.colorScheme.primary
-                        val statusIcon = if (info.hasConnectionError)
-                            Icons.Default.Warning
-                        else
-                            Icons.Default.CheckCircle
-                        Icon(
-                            imageVector = statusIcon,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = statusColor
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = info.authorizedStatusText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = statusColor
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = info.cloudPath,
                         style = MaterialTheme.typography.bodySmall,
@@ -166,4 +128,81 @@ private fun CloudDirectoryDialog(
             }
         }
     )
+}
+
+@Composable
+private fun ProviderRow(
+    provider: CloudProviderInfo,
+    onClick: () -> Unit,
+    onEdit: () -> Unit
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = provider.icon,
+                contentDescription = null,
+                modifier = Modifier.size(30.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = provider.displayName,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = provider.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            RadioButton(
+                selected = provider.isActive,
+                onClick = onClick
+            )
+        }
+
+        if (provider.hasCredentials) {
+            val statusColor = if (provider.hasConnectionError)
+                MaterialTheme.colorScheme.error
+            else
+                MaterialTheme.colorScheme.primary
+            val statusIcon = if (provider.hasConnectionError)
+                Icons.Default.Warning
+            else
+                Icons.Default.CheckCircle
+            Row(
+                modifier = Modifier.padding(start = 44.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = statusIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = statusColor
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = provider.authorizedStatusText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = statusColor
+                )
+            }
+        }
+
+        if (provider.authKind == CloudAuthKind.USERNAME_PASSWORD && provider.hasCredentials) {
+            TextButton(
+                onClick = onEdit,
+                modifier = Modifier.padding(start = 34.dp)
+            ) {
+                Text(stringResource(CoreUiStrings.webdav_edit))
+            }
+        }
+    }
 }

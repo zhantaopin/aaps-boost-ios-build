@@ -26,7 +26,23 @@ data class CloudDirectoryInfo(
 interface CloudDirectoryManager {
 
     fun getCloudDirectoryInfo(): CloudDirectoryInfo
+
+    /** All providers this build can show. Android adds WebDAV; other targets show Google only. */
+    fun getCloudProviders(): List<CloudProviderInfo>
+
+    /** Saved WebDAV settings for the edit dialog, without the password. */
+    fun getWebDavSettings(): WebDavSettings
+
+    /** Checks and saves WebDAV credentials, then makes WebDAV the active cloud. */
+    suspend fun configureWebDav(config: WebDavConfig): Boolean
+
+    /** Uses saved WebDAV credentials, checks them and makes WebDAV active. */
+    suspend fun activateWebDav(): Boolean
+
     fun clearCloudSettings()
+
+    /** Clears the saved credentials of one provider without touching the others. */
+    fun clearProviderCredentials(storageType: String)
 
     /**
      * Revoke the OAuth grant server-side (true deauthorize) and then clear all local cloud
@@ -42,7 +58,9 @@ interface CloudDirectoryManager {
     fun enableAllCloudExport()
     fun enableLocalStorage()
     suspend fun testConnection(): Boolean
+    suspend fun testConnection(storageType: String): Boolean
     suspend fun startAuth(): String?
+    suspend fun startAuth(storageType: String): String?
     /**
      * Waits for the browser to come back with an authorization code.
      *
@@ -53,6 +71,9 @@ interface CloudDirectoryManager {
      * in end at 61 seconds.
      */
     suspend fun waitForAuthCode(timeoutMs: Long = AUTH_WAIT_MS): String?
+    suspend fun waitForAuthCode(storageType: String, timeoutMs: Long = AUTH_WAIT_MS): String?
     suspend fun completeAuth(authCode: String): Boolean
+    suspend fun completeAuth(storageType: String, authCode: String): Boolean
     suspend fun setupCloudStorage(): Boolean
+    suspend fun setupCloudStorage(storageType: String): Boolean
 }

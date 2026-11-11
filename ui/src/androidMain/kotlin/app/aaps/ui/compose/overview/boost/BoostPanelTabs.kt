@@ -2,6 +2,7 @@ package app.aaps.ui.compose.overview.boost
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -10,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,7 +33,7 @@ fun boostPanelPlugins(plugins: List<PluginBase>): List<PluginBase> =
         .filter { it.isEnabled(it.pluginDescription.mainType) && it.hasComposeContent() && it.showInList() }
         .sortedBy { PANEL_TYPE_ORDER.indexOf(it.pluginDescription.mainType) }
 
-private class BoostPanelTab(val label: String, val onClick: () -> Unit)
+private class BoostPanelTab(val label: String, val onClick: () -> Unit, val active: Boolean = false)
 
 /**
  * The panels 3.4 kept as tabs, one tap from the overview. Each opens its own screen and Back returns,
@@ -41,6 +43,7 @@ private class BoostPanelTab(val label: String, val onClick: () -> Unit)
 internal fun BoostPanelTabs(
     plugins: List<PluginBase>,
     isTreatmentsEnabled: Boolean,
+    activeScene: Boolean,
     actionsLabel: String,
     onActions: () -> Unit,
     onElement: (ElementType) -> Unit,
@@ -48,7 +51,7 @@ internal fun BoostPanelTabs(
     modifier: Modifier = Modifier
 ) {
     @Composable
-    fun element(type: ElementType) = BoostPanelTab(stringResourceOrNull(type.label()).orEmpty()) { onElement(type) }
+    fun element(type: ElementType) = BoostPanelTab(stringResourceOrNull(type.label()).orEmpty(), { onElement(type) })
 
     val tabs = buildList {
         add(BoostPanelTab(actionsLabel, onActions))
@@ -57,26 +60,33 @@ internal fun BoostPanelTabs(
         add(element(ElementType.INSULIN_MANAGEMENT))
         add(element(ElementType.PROFILE_MANAGEMENT))
         add(element(ElementType.AUTOMATION_MANAGEMENT))
+        // Scenes sit next to automation: the tab doubles as the "a scene is running" light.
+        add(BoostPanelTab(stringResourceOrNull(ElementType.SCENE_MANAGEMENT.label()).orEmpty(), { onElement(ElementType.SCENE_MANAGEMENT) }, active = activeScene))
         add(element(ElementType.FOOD_MANAGEMENT))
         add(element(ElementType.STATISTICS))
         add(element(ElementType.HISTORY_BROWSER))
-        plugins.forEach { plugin -> add(BoostPanelTab(plugin.name) { onPlugin(plugin) }) }
+        plugins.forEach { plugin -> add(BoostPanelTab(plugin.name, { onPlugin(plugin) })) }
         add(element(ElementType.MAINTENANCE))
         add(element(ElementType.CONFIGURATION))
     }
 
     LazyRow(modifier = modifier.fillMaxWidth().background(BoostV2Colors.cardBackground)) {
         items(tabs) { tab ->
-            Text(
-                text = tab.label,
-                color = BoostV2Colors.textPrimary,
-                fontSize = 13.sp,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clickable(onClick = tab.onClick)
                     .heightIn(min = 48.dp)
                     .wrapContentHeight()
                     .padding(horizontal = 12.dp)
-            )
+            ) {
+                // A running scene is lit in the top bar; the tab only changes colour.
+                Text(
+                    text = tab.label,
+                    color = if (tab.active) BoostV2Colors.accent else BoostV2Colors.textPrimary,
+                    fontSize = 13.sp
+                )
+            }
         }
     }
 }

@@ -78,7 +78,12 @@ fun ClientControlPendingDialog(
             // appeared instead of changing and nothing was announced at all - a blind user sent a
             // bolus, heard "waiting", and was never told that the master had refused it.
             val bodyText = when {
-                partial                                -> stringResource(UiStrings.clientcontrol_pending_partial_format, pending.label)
+                // The master names the actions that did not apply; show them when it sent any.
+                partial -> {
+                    val detail = progress.detail?.takeIf { it.isNotBlank() }
+                    if (detail != null) stringResource(UiStrings.clientcontrol_pending_partial_detail_format, pending.label, detail)
+                    else stringResource(UiStrings.clientcontrol_pending_partial_format, pending.label)
+                }
                 progress is ActionProgress.Rejected    ->
                     stringResource(UiStrings.clientcontrol_pending_failed_format, pending.label, progress.detail?.takeIf { it.isNotBlank() } ?: reasonText(progress.reason))
                 progress is ActionProgress.Unconfirmed -> stringResource(UiStrings.clientcontrol_pending_unconfirmed_format, pending.label, reasonText(progress.reason))

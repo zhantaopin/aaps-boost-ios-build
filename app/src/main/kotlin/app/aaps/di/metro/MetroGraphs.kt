@@ -53,6 +53,7 @@ import app.aaps.core.objects.di.CoreObjectsGraph
 import app.aaps.core.objects.workflow.MetroWorkerCreator
 import app.aaps.database.AppRepository
 import app.aaps.database.di.DatabaseConfig
+import app.aaps.core.interfaces.logging.LoggerUtils
 import app.aaps.di.ExternalOptionsOverride
 import app.aaps.di.PluginSource
 import app.aaps.di.mergePlugins
@@ -245,6 +246,8 @@ class MetroGraphs(
     val profileFunction: ProfileFunction get() = root.profileFunction
     val versionCheckerUtils: VersionCheckerUtils get() = root.versionCheckerUtils
     val nsIncomingDataProcessor: NsIncomingDataProcessor get() = root.nsIncomingDataProcessor
+    /** Applies the stored log level at startup, before the first log line. */
+    val loggerUtils: LoggerUtils get() = root.loggerUtils
     val automation: Automation get() = root.automation
     val automationRuntime: AutomationRuntime get() = root.automationRuntime
 

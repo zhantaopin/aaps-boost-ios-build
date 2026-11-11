@@ -13,15 +13,20 @@ import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.L
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.logging.LogElement
+import app.aaps.core.interfaces.logging.LogLevel
+import app.aaps.core.interfaces.logging.LoggerUtils
 import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.maintenance.CloudAuthKind
 import app.aaps.core.interfaces.maintenance.CloudDirectoryInfo
 import app.aaps.core.interfaces.maintenance.CloudDirectoryManager
+import app.aaps.core.interfaces.maintenance.CloudProviderInfo
 import app.aaps.core.interfaces.maintenance.ExportConfig
 import app.aaps.core.interfaces.maintenance.ExportDestination
 import app.aaps.core.interfaces.maintenance.ExportResult
 import app.aaps.core.interfaces.maintenance.ImportExportPrefs
 import app.aaps.core.interfaces.maintenance.Maintenance
 import app.aaps.core.interfaces.maintenance.PrefsFileInfo
+import app.aaps.core.interfaces.maintenance.WebDavConfig
 import app.aaps.core.interfaces.overview.OverviewData
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.plugin.ActivePlugin
@@ -55,6 +60,9 @@ sealed interface MaintenanceEvent {
     data class Error(val message: String) : MaintenanceEvent
     data class LaunchBrowser(val url: String) : MaintenanceEvent
     data object BringToForeground : MaintenanceEvent
+
+    /** Closes the maintenance sheet so a following snackbar is not hidden behind it. */
+    data object CloseSheet : MaintenanceEvent
 }
 
 // Registers itself: @ViewModelKey infers the key from the class. No graph entry, and deliberately
@@ -81,7 +89,8 @@ class MaintenanceViewModel(
     private val overviewData: OverviewData,
     private val overviewDataCache: OverviewDataCache,
     private val nsClient: NsClient,
-    private val dateUtil: DateUtil
+    private val dateUtil: DateUtil,
+    private val loggerUtils: LoggerUtils
 ) : ViewModel() {
 
     private val _events = MutableSharedFlow<MaintenanceEvent>()
@@ -144,6 +153,15 @@ class MaintenanceViewModel(
 
     // Log elements for LogSettingBottomSheet
     val logElements: List<LogElement> get() = l.logElements()
+
+    /** The level in force. Persisted by [LoggerUtils] and applied immediately. */
+    private val _logLevel = MutableStateFlow(loggerUtils.logLevel())
+    val logLevel: StateFlow<LogLevel> = _logLevel.asStateFlow()
+
+    fun setLogLevel(level: LogLevel) {
+        loggerUtils.setLogLevel(level)
+        _logLevel.value = level
+    }
 
     fun toggleLogElement(element: LogElement, enabled: Boolean) {
         element.enable(enabled)
@@ -293,9 +311,21 @@ class MaintenanceViewModel(
 
     sealed interface CloudDirectoryState {
         data object Hidden : CloudDirectoryState
-        data class Shown(val info: CloudDirectoryInfo) : CloudDirectoryState
+        data class Shown(
+            val info: CloudDirectoryInfo,
+            val providers: List<CloudProviderInfo>
+        ) : CloudDirectoryState
+
+        data class WebDavSetup(
+            val baseUrl: String,
+            val username: String,
+            val hasStoredPassword: Boolean,
+            val isConnecting: Boolean = false,
+            val error: String? = null
+        ) : CloudDirectoryState
+
         data object ConfirmClear : CloudDirectoryState
-        data object Reauthorize : CloudDirectoryState
+        data class Reauthorize(val storageType: String) : CloudDirectoryState
     }
 
     private val _cloudDirectoryState = MutableStateFlow<CloudDirectoryState>(CloudDirectoryState.Hidden)
@@ -303,32 +333,118 @@ class MaintenanceViewModel(
 
     fun showCloudDirectory() {
         val info = cloudDirectoryManager.getCloudDirectoryInfo()
-        _cloudDirectoryState.value = CloudDirectoryState.Shown(info)
+        val providers = cloudDirectoryManager.getCloudProviders()
+        _cloudDirectoryState.value = CloudDirectoryState.Shown(info, providers)
     }
 
     fun dismissCloudDirectory() {
         _cloudDirectoryState.value = CloudDirectoryState.Hidden
     }
 
-    fun connectGoogleDrive() {
-        val info = cloudDirectoryManager.getCloudDirectoryInfo()
+    fun onProviderClick(provider: CloudProviderInfo) {
+        when (provider.authKind) {
+            CloudAuthKind.OAUTH -> connectOAuth(provider)
+            CloudAuthKind.USERNAME_PASSWORD -> {
+                if (provider.hasCredentials && !provider.isActive) activateWebDav()
+                else showWebDavSetup()
+            }
+        }
+    }
+
+    private fun connectOAuth(provider: CloudProviderInfo) {
         viewModelScope.launch(aapsIoDispatcher) {
             try {
-                if (info.hasCredentials) {
-                    if (cloudDirectoryManager.testConnection()) {
-                        cloudDirectoryManager.setupCloudStorage()
+                if (provider.hasCredentials) {
+                    if (cloudDirectoryManager.testConnection(provider.storageType) &&
+                        cloudDirectoryManager.setupCloudStorage(provider.storageType)
+                    ) {
                         refreshExportConfig()
                         _cloudDirectoryState.value = CloudDirectoryState.Hidden
                     } else {
-                        _cloudDirectoryState.value = CloudDirectoryState.Reauthorize
+                        _cloudDirectoryState.value = CloudDirectoryState.Reauthorize(provider.storageType)
                     }
                 } else {
-                    startAuthAndComplete()
+                    startAuthAndComplete(provider.storageType)
                 }
             } catch (e: Exception) {
                 aapsLogger.error("Cloud directory connection error", e)
                 _events.emit(MaintenanceEvent.Error(e.message ?: rh.gs(CoreUiStrings.error)))
                 _cloudDirectoryState.value = CloudDirectoryState.Hidden
+            }
+        }
+    }
+
+    fun showWebDavSetup(error: String? = null) {
+        val settings = cloudDirectoryManager.getWebDavSettings()
+        _cloudDirectoryState.value = CloudDirectoryState.WebDavSetup(
+            baseUrl = settings.baseUrl,
+            username = settings.username,
+            hasStoredPassword = settings.hasPassword,
+            error = error
+        )
+    }
+
+    fun dismissWebDavSetup() {
+        showCloudDirectory()
+    }
+
+    fun connectWebDav(baseUrl: String, username: String, password: String) {
+        val current = _cloudDirectoryState.value as? CloudDirectoryState.WebDavSetup ?: return
+        if (current.isConnecting) return
+
+        val url = baseUrl.trim()
+        val user = username.trim()
+        val error = when {
+            !url.startsWith("https://") -> CoreUiStrings.webdav_invalid_url
+            user.isEmpty() -> CoreUiStrings.webdav_username_required
+            password.isEmpty() && !current.hasStoredPassword -> CoreUiStrings.webdav_password_required
+            password.isEmpty() && (url.trimEnd('/') != current.baseUrl.trimEnd('/') || user != current.username) ->
+                CoreUiStrings.webdav_enter_password_after_change
+            else -> null
+        }
+        if (error != null) {
+            _cloudDirectoryState.value = current.copy(error = rh.gs(error))
+            return
+        }
+
+        _cloudDirectoryState.value = current.copy(isConnecting = true, error = null)
+        viewModelScope.launch(aapsIoDispatcher) {
+            try {
+                if (cloudDirectoryManager.configureWebDav(WebDavConfig(url, user, password))) {
+                    cloudDirectoryManager.enableAllCloudExport()
+                    refreshExportConfig()
+                    _events.emit(MaintenanceEvent.Snackbar(rh.gs(CoreUiStrings.webdav_saved)))
+                    _cloudDirectoryState.value = CloudDirectoryState.Hidden
+                } else {
+                    _cloudDirectoryState.value = current.copy(
+                        isConnecting = false,
+                        error = rh.gs(CoreUiStrings.webdav_connect_failed)
+                    )
+                }
+            } catch (e: Exception) {
+                aapsLogger.error("WebDAV connection error", e)
+                _cloudDirectoryState.value = current.copy(
+                    isConnecting = false,
+                    error = e.message ?: rh.gs(CoreUiStrings.webdav_connect_failed)
+                )
+            }
+        }
+    }
+
+    private fun activateWebDav() {
+        viewModelScope.launch(aapsIoDispatcher) {
+            try {
+                if (cloudDirectoryManager.activateWebDav()) {
+                    cloudDirectoryManager.enableAllCloudExport()
+                    refreshExportConfig()
+                    _events.emit(MaintenanceEvent.Snackbar(rh.gs(CoreUiStrings.webdav_saved)))
+                    _cloudDirectoryState.value = CloudDirectoryState.Hidden
+                } else {
+                    showWebDavSetup(rh.gs(CoreUiStrings.webdav_connect_failed))
+                }
+            } catch (e: Exception) {
+                aapsLogger.error("WebDAV activation error", e)
+                showWebDavSetup(e.message ?: rh.gs(CoreUiStrings.webdav_connect_failed))
             }
         }
     }
@@ -376,31 +492,33 @@ class MaintenanceViewModel(
     }
 
     fun reauthorize() {
-        cloudDirectoryManager.clearCloudSettings()
+        val storageType = (_cloudDirectoryState.value as? CloudDirectoryState.Reauthorize)?.storageType ?: return
+        cloudDirectoryManager.clearProviderCredentials(storageType)
         viewModelScope.launch(aapsIoDispatcher) {
-            startAuthAndComplete()
+            startAuthAndComplete(storageType)
         }
     }
 
-    private suspend fun startAuthAndComplete() {
+    private suspend fun startAuthAndComplete(storageType: String) {
         try {
-            val authUrl = cloudDirectoryManager.startAuth()
+            val authUrl = cloudDirectoryManager.startAuth(storageType)
             if (authUrl != null) {
                 _cloudDirectoryState.value = CloudDirectoryState.Hidden
                 _events.emit(MaintenanceEvent.LaunchBrowser(authUrl))
-                val authCode = cloudDirectoryManager.waitForAuthCode()
-                if (authCode != null && cloudDirectoryManager.completeAuth(authCode)) {
-                    cloudDirectoryManager.setupCloudStorage()
+                val authCode = cloudDirectoryManager.waitForAuthCode(storageType)
+                if (authCode != null &&
+                    cloudDirectoryManager.completeAuth(storageType, authCode) &&
+                    cloudDirectoryManager.setupCloudStorage(storageType)
+                ) {
                     cloudDirectoryManager.enableAllCloudExport()
                     refreshExportConfig()
                     _events.emit(MaintenanceEvent.BringToForeground)
                     _events.emit(MaintenanceEvent.Snackbar(rh.gs(CoreUiStrings.cloud_auth_success)))
-                    _cloudDirectoryState.value = CloudDirectoryState.Hidden
                 } else {
                     _events.emit(MaintenanceEvent.BringToForeground)
                     _events.emit(MaintenanceEvent.Error(rh.gs(CoreUiStrings.error)))
-                    _cloudDirectoryState.value = CloudDirectoryState.Hidden
                 }
+                _cloudDirectoryState.value = CloudDirectoryState.Hidden
             } else {
                 _events.emit(MaintenanceEvent.Error(rh.gs(CoreUiStrings.error)))
             }
@@ -439,7 +557,10 @@ class MaintenanceViewModel(
 
         val preparation = importExportPrefs.prepareExport()
         if (preparation == null) {
-            viewModelScope.launch { _events.emit(MaintenanceEvent.Error(rh.gs(CoreUiStrings.error))) }
+            viewModelScope.launch {
+                _events.emit(MaintenanceEvent.CloseSheet)
+                _events.emit(MaintenanceEvent.Error(rh.gs(CoreUiStrings.error)))
+            }
             return
         }
 
@@ -484,6 +605,8 @@ class MaintenanceViewModel(
                 importExportPrefs.executeExport(password)
             }
             val message = buildExportResultMessage(result)
+            // The sheet covers the snackbar on small screens: close it first so the result is visible.
+            _events.emit(MaintenanceEvent.CloseSheet)
             _events.emit(MaintenanceEvent.Snackbar(message))
         }
     }

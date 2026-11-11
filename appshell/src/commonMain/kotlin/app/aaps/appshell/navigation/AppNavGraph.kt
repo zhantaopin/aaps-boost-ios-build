@@ -790,6 +790,7 @@ fun NavGraphBuilder.appNavGraph(
             swDefinition = swDefinition,
             onFinish = {
                 preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
+                swDefinition.onWizardFinished()
                 navController.safePopBackStack()
             },
             // Closing counts as processed, the same as finishing. The flag is "processed", not

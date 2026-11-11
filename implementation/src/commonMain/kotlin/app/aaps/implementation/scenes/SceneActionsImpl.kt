@@ -43,7 +43,8 @@ class SceneActionsImpl(
     override suspend fun commitStart(id: Long): ActionProgress =
         roleBranch.commit(
             rh.gs(CoreUiStrings.scene),
-            ClientControlActionDispatcher.Command.SceneCommit(id)
+            ClientControlActionDispatcher.Command.SceneCommit(id),
+            syncFailureReason = FailureReason.PartialFailure
         ) { onError -> sceneApi.commitScene(id, onError) }
 
     override suspend fun stop(triggerChain: Boolean): ActionProgress =

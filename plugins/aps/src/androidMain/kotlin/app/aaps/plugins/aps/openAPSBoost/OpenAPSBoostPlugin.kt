@@ -62,6 +62,8 @@ import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.withClick
+import app.aaps.core.keys.interfaces.withCompose
+import app.aaps.core.ui.compose.ComposeScreenContent
 import app.aaps.plugins.aps.getBoostDosing
 import app.aaps.core.objects.constraints.ConstraintObject
 import app.aaps.core.objects.extensions.convertedToAbsolute
@@ -80,6 +82,7 @@ import app.aaps.plugins.aps.compose.OpenAPSComposeContent
 import app.aaps.plugins.aps.events.EventOpenAPSUpdateGui
 import app.aaps.plugins.aps.events.EventResetOpenAPSGui
 import app.aaps.plugins.aps.keys.ApsIntentKey
+import app.aaps.plugins.aps.openAPSBoost.compose.BoostSensorCheckScreen
 import app.aaps.plugins.aps.openAPSBoostV5.OpenAPSBoostV5Plugin
 import app.aaps.plugins.aps.openAPSSMB.GlucoseStatusCalculatorSMB
 import dev.zacsweers.metro.AppScope
@@ -2271,17 +2274,26 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 // consecutive dark minutes during 08:00-22:00 local, one low-priority notification
                 // per dark episode (the wear watchdog re-registers the sensor; this covers every
                 // other silent-death mode: BT drop, Garmin app dead, watch off wrist).
-                val darkEvent = hrFeedDarkTracker.onCycle(hrRes, now, java.time.LocalTime.now().hour)
-                darkEvent.wentDarkNote?.let { note ->
-                    aapsLogger.warn(LTag.APS, note)
-                    it.reason.append("$note; ")
-                }
-                if (darkEvent.raiseNotification) {
-                    notificationManager.post(
-                        NotificationId.BOOST_MESSAGE,
-                        "Boost: heart-rate feed has been dark for ${darkEvent.darkMinutes} min — check the watch/Garmin connection",
-                        level = NotificationLevel.LOW
-                    )
+                // The watchdog only matters while a heart-rate source is expected. With the watch source
+                // and the integration both off there is no feed to watch, and the daily "dark" note would
+                // be pure noise — reset instead, so re-enabling never inherits a stale dark episode.
+                val hrExpected = preferences.get(BooleanKey.ApsBoostWatchHrEnabled) ||
+                    preferences.get(BooleanKey.ApsBoostHrIntegrationEnabled)
+                if (hrExpected) {
+                    val darkEvent = hrFeedDarkTracker.onCycle(hrRes, now, java.time.LocalTime.now().hour)
+                    darkEvent.wentDarkNote?.let { note ->
+                        aapsLogger.warn(LTag.APS, note)
+                        it.reason.append("$note; ")
+                    }
+                    if (darkEvent.raiseNotification) {
+                        notificationManager.post(
+                            NotificationId.BOOST_MESSAGE,
+                            "Boost: heart-rate feed has been dark for ${darkEvent.darkMinutes} min — check the watch/Garmin connection",
+                            level = NotificationLevel.LOW
+                        )
+                    }
+                } else {
+                    hrFeedDarkTracker.reset()
                 }
 
                 // auto-config breadcrumb, replayed EVERY cycle so it reaches Nightscout and
@@ -2926,13 +2938,33 @@ open class OpenAPSBoostPlugin @Inject constructor(
                 key = "boost_exercise_settings",
                 title = ApsStrings.boost_settings_exercise,
                 items = listOf(
-                    // 4a. Step Count Settings
+                    // 4a. Sensor (advanced): both sources are off by default and only useful on hardware
+                    // that actually exposes them, so they stay one level down instead of in the main list.
+                    PreferenceSubScreenDef(
+                        key = "boost_sensor_advanced_settings",
+                        title = ApsStrings.boost_sensor_advanced_title,
+                        summary = ApsStrings.boost_sensor_advanced_summary,
+                        items = listOf(
+                            BooleanKey.ApsBoostPhoneStepsEnabled,
+                            BooleanKey.ApsBoostWatchHrEnabled,
+                            IntKey.ApsBoostWatchHrIntervalMin,
+                            // Answers "no sensor / no permission / not registered / registered but
+                            // silent" without a logcat session. Read-only, samples only on tap.
+                            ApsIntentKey.BoostSensorCheck.withCompose(ComposeScreenContent { onBack ->
+                                BoostSensorCheckScreen(
+                                    preferences = preferences,
+                                    persistenceLayer = persistenceLayer,
+                                    onBack = onBack
+                                )
+                            })
+                        )
+                    ),
+                    // 4b. Step Count Settings
                     PreferenceSubScreenDef(
                         key = "boost_stepcount_settings",
                         title = ApsStrings.boost_stepcount_settings_title,
                         summary = ApsStrings.boost_stepcount_settings_summary,
                         items = listOf(
-                            BooleanKey.ApsBoostPhoneStepsEnabled,
                             IntKey.ApsBoostInactivitySteps,
                             DoubleKey.ApsBoostInactivityPct,
                             DoubleKey.ApsBoostSleepInHours,
@@ -2951,8 +2983,6 @@ open class OpenAPSBoostPlugin @Inject constructor(
                         summary = ApsStrings.boost_hr_integration_summary,
                         items = listOf(
                             BooleanKey.ApsBoostHrIntegrationEnabled,
-                            BooleanKey.ApsBoostWatchHrEnabled,
-                            IntKey.ApsBoostWatchHrIntervalMin,
                             IntKey.ApsBoostHrMaxBpm,
                             IntKey.ApsBoostHrRestingBpm,
                             IntKey.ApsBoostHrWindowMinutes,

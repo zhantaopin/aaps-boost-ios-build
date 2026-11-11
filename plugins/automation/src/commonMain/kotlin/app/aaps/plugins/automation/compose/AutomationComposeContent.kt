@@ -13,6 +13,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,6 +39,7 @@ import app.aaps.core.keys.interfaces.ClientRole
 import app.aaps.core.objects.extensions.profileNames
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.ComposablePluginContent
+import app.aaps.core.ui.compose.LocalImeSubmit
 import app.aaps.core.ui.compose.ToolbarConfig
 import app.aaps.core.ui.compose.masterEditingEnabled
 import app.aaps.core.ui.compose.stringResource
@@ -281,16 +283,24 @@ class AutomationComposeContent(
             }
 
         key(resetTick) {
-            AutomationEditTriggerScreen(
-                root = holder.workingEvent().trigger,
-                bondedDevices = pairedNames.orEmpty(),
-                onUseCurrentLocation = useCurrentLocation,
-                availableTriggers = plugin.getTriggerDummyObjects(),
-                createTrigger = { cn -> instantiateTrigger(cn) },
-                newConnector = { TriggerConnector(triggerFactory.deps) },
-                onChange = { holder.onTriggerChanged() },
-                onPickLocationFromMap = { triggerLoc -> holder.openMapPicker(triggerLoc) }
-            )
+            // The keyboard's Done key leaves this screen, like the save icon in the toolbar.
+            CompositionLocalProvider(
+                LocalImeSubmit provides {
+                    focusManager.clearFocus()
+                    holder.closeTriggerEditor()
+                }
+            ) {
+                AutomationEditTriggerScreen(
+                    root = holder.workingEvent().trigger,
+                    bondedDevices = pairedNames.orEmpty(),
+                    onUseCurrentLocation = useCurrentLocation,
+                    availableTriggers = plugin.getTriggerDummyObjects(),
+                    createTrigger = { cn -> instantiateTrigger(cn) },
+                    newConnector = { TriggerConnector(triggerFactory.deps) },
+                    onChange = { holder.onTriggerChanged() },
+                    onPickLocationFromMap = { triggerLoc -> holder.openMapPicker(triggerLoc) }
+                )
+            }
         }
     }
 
@@ -432,26 +442,35 @@ class AutomationComposeContent(
         val profileNames = localProfileNames()
         val sceneOptions = sceneApi.getScenes()
 
-        AutomationEditScreen(
-            state = editState,
-            liveActions = holder.workingEvent().actions.toList(),
-            profileNames = profileNames,
-            sceneOptions = sceneOptions,
-            tick = actionTick,
-            onTitleChange = holder::editTitleChanged,
-            onUserActionChange = holder::editUserActionChanged,
-            onEnabledChange = holder::editEnabledChanged,
-            onEditTrigger = { holder.openTriggerEditor() },
-            onAddAction = { showActionSheet = true },
-            onRemoveAction = { index ->
-                holder.removeAction(index)
-                actionTick++
-            },
-            onActionChanged = {
-                holder.onWorkingEventChanged()
-                actionTick++
+        // The keyboard's Done key saves and leaves, like the save icon in the toolbar.
+        val actionFocusManager = LocalFocusManager.current
+        CompositionLocalProvider(
+            LocalImeSubmit provides {
+                actionFocusManager.clearFocus()
+                holder.save()
             }
-        )
+        ) {
+            AutomationEditScreen(
+                state = editState,
+                liveActions = holder.workingEvent().actions.toList(),
+                profileNames = profileNames,
+                sceneOptions = sceneOptions,
+                tick = actionTick,
+                onTitleChange = holder::editTitleChanged,
+                onUserActionChange = holder::editUserActionChanged,
+                onEnabledChange = holder::editEnabledChanged,
+                onEditTrigger = { holder.openTriggerEditor() },
+                onAddAction = { showActionSheet = true },
+                onRemoveAction = { index ->
+                    holder.removeAction(index)
+                    actionTick++
+                },
+                onActionChanged = {
+                    holder.onWorkingEventChanged()
+                    actionTick++
+                }
+            )
+        }
 
         if (showActionSheet) {
             val options = remember { plugin.getActionDummyObjects().map { ActionOption.from(it) } }

@@ -339,4 +339,47 @@ class ProtectionCheckImplTest : TestBase() {
         sut.requestProtection(ProtectionCheck.Protection.NONE) { result = it }
         assertThat(result).isEqualTo(ProtectionResult.GRANTED)
     }
+
+    // --- A custom password or PIN that was never entered is no protection (#5462) ---
+
+    private fun assertGrantedWithoutPrompt(protection: ProtectionCheck.Protection) {
+        var result: ProtectionResult? = null
+        sut.requestProtection(protection) { result = it }
+        assertThat(result).isEqualTo(ProtectionResult.GRANTED)
+        assertThat(sut.pendingRequest.value).isNull()
+    }
+
+    private fun stubMasterPasswordAlwaysAsk() {
+        `when`(preferences.get(StringKey.ProtectionMasterPassword)).thenReturn("secret")
+        `when`(preferences.get(IntKey.ProtectionTimeout)).thenReturn(0)
+        `when`(dateUtil.now()).thenReturn(1000_000L)
+    }
+
+    @Test
+    fun `requestProtection grants APPLICATION when custom password was never entered`() {
+        stubMasterPasswordAlwaysAsk()
+        `when`(preferences.get(IntKey.ProtectionTypeApplication)).thenReturn(3) // CUSTOM_PASSWORD
+        `when`(preferences.get(StringKey.ProtectionApplicationPassword)).thenReturn("")
+        assertGrantedWithoutPrompt(ProtectionCheck.Protection.APPLICATION)
+    }
+
+    @Test
+    fun `requestProtection grants BOLUS when custom PIN was never entered`() {
+        stubMasterPasswordAlwaysAsk()
+        enableSettingsProtection()
+        `when`(preferences.get(IntKey.ProtectionTypeBolus)).thenReturn(4) // CUSTOM_PIN
+        `when`(preferences.get(StringKey.ProtectionBolusPin)).thenReturn("")
+        assertGrantedWithoutPrompt(ProtectionCheck.Protection.BOLUS)
+    }
+
+    @Test
+    fun `requestProtection still prompts when the custom password is set`() {
+        stubMasterPasswordAlwaysAsk()
+        `when`(preferences.get(IntKey.ProtectionTypeApplication)).thenReturn(3) // CUSTOM_PASSWORD
+        `when`(preferences.get(StringKey.ProtectionApplicationPassword)).thenReturn("set")
+        var result: ProtectionResult? = null
+        sut.requestProtection(ProtectionCheck.Protection.APPLICATION) { result = it }
+        assertThat(result).isNull()
+        assertThat(sut.pendingRequest.value).isNotNull()
+    }
 }

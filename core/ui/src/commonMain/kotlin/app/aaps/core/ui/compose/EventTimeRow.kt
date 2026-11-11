@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import app.aaps.core.ui.CoreUiStrings
 
 /**
@@ -49,6 +50,10 @@ fun EventTimeRow(
             Text(
                 text = if (timeChanged) displayText else stringResource(CoreUiStrings.carb_time_now),
                 style = MaterialTheme.typography.titleMedium,
+                // A long date plus weekday does not fit beside the label on a 320 dp screen; without
+                // this it runs into the label.
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 color = if (timeChanged) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurface
             )

@@ -385,4 +385,169 @@
     <string name="pref_summary_boost_watch_hr_enabled">每隔几分钟采样本机心率传感器 60 秒。用于睡眠检测；开启“心率集成”后也用于运动分类。会增加耗电。</string>
     <string name="pref_title_boost_watch_hr_interval_min">心率采样间隔</string>
     <string name="pref_summary_boost_watch_hr_interval_min">两次 60 秒心率采样之间的分钟数。间隔越长越省电。</string>
+    <!--    Boost overview / general-->
+    <string name="pref_title_use_boost_overview_v2">启动时打开 Boost 概览</string>
+    <string name="pref_summary_use_boost_overview_v2">应用启动时显示 Boost V2 概览。按返回键回到标准概览。</string>
+    <string name="pref_summary_alert_override_dnd">开启：即使手机静音或处于勿扰模式，警报也会响铃。关闭：此时警报不响铃，在勿扰模式下仅振动。</string>
+    <string name="pref_title_aps_loop_at_native_cadence">按传感器频率运行闭环</string>
+    <string name="pref_summary_aps_loop_at_native_cadence">每收到一次传感器读数就运行一次闭环，而不是每五分钟运行一次。对五分钟传感器无影响。对于一分钟传感器，这会使闭环每分钟运行一次，也允许更频繁地使用 SMB。</string>
+    <!--    Boost activity / heart rate-->
+    <string name="pref_title_boost_activity_pct">活动时的配置文件百分比</string>
+    <string name="pref_title_boost_activity_shadow_enabled">活动负荷影子模式（步数）</string>
+    <string name="pref_title_boost_activity_steps_15">15 分钟活动步数</string>
+    <string name="pref_title_boost_activity_steps_30">30 分钟活动步数</string>
+    <string name="pref_title_boost_activity_steps_5">5 分钟活动步数</string>
+    <string name="pref_title_boost_activity_steps_60">60 分钟活动步数</string>
+    <string name="pref_title_boost_adjust_sensitivity">启用 TDD 灵敏度调整</string>
+    <string name="pref_title_boost_allow_all_bg_sources">允许所有血糖来源</string>
+    <string name="pref_title_boost_allow_with_high_tt">允许在高临时目标下使用 Boost</string>
+    <string name="pref_title_boost_autosens_when_no_tdd">TDD 关闭时使用传统 Autosens</string>
+    <string name="pref_title_boost_bolus_cap">Boost 大剂量上限</string>
+    <string name="pref_title_boost_bypass_version_check">跳过版本检查</string>
+    <string name="pref_title_boost_cumulative_smb_cap_60min">SMB 累计上限（60 分钟）</string>
+    <string name="pref_title_boost_daily_step_history">每日步数历史（内部）</string>
+    <string name="pref_title_boost_dynisf_adjustment" formatted="false">TDD 调整系数（%）</string>
+    <string name="pref_title_boost_dynisf_bg_cap">DynISF 血糖上限</string>
+    <string name="pref_title_boost_dynisf_normal_target">DynISF 常规目标</string>
+    <string name="pref_title_boost_dynisf_velocity" formatted="false">血糖对 ISF 的影响（%）</string>
+    <string name="pref_title_boost_enable_circadian_isf">启用昼夜节律 ISF</string>
+    <string name="pref_title_boost_end_time">Boost 结束时间</string>
+    <string name="pref_title_boost_health_connect_hr_enabled">使用 Health Connect 获取心率</string>
+    <string name="pref_title_boost_health_connect_poll_min">Health Connect 轮询间隔（分钟）</string>
+    <string name="pref_title_boost_history_sync_summary">历史同步摘要（内部）</string>
+    <string name="pref_title_boost_hr_integration_enabled">启用心率集成</string>
+    <string name="pref_title_boost_hr_max_bpm">最大心率（HRmax）</string>
+    <string name="pref_title_boost_hr_resting_bpm">静息心率</string>
+    <string name="pref_title_boost_hr_stress_detection">启用压力检测</string>
+    <string name="pref_title_boost_hr_window_minutes">心率平均窗口（分钟）</string>
+    <string name="pref_title_boost_inactivity_pct">不活动时的配置文件百分比</string>
+    <string name="pref_title_boost_inactivity_steps">不活动步数阈值</string>
+    <string name="pref_title_boost_insulin_req_pct" formatted="false">Boost 所需胰岛素（%）</string>
+    <string name="pref_title_boost_intraday_step_bank">日内步数储备（内部）</string>
+    <string name="pref_title_boost_last_engine_mode">上次引擎模式（内部）</string>
+    <string name="pref_title_boost_last_use_tdd">上次使用 TDD 的设置（内部）</string>
+    <string name="pref_title_boost_max_iob">Boost 最大 IOB</string>
+    <string name="pref_title_boost_meal_time_history">进餐时间历史（内部）</string>
+    <string name="pref_title_boost_ml_ring_buffer">ML 环形缓冲区（内部）</string>
+    <string name="pref_title_boost_night_mode_auto_by_sleep">自动检测睡眠（心率 + 步数）</string>
+    <string name="pref_title_boost_night_mode_bg_offset">夜间模式血糖偏移</string>
+    <string name="pref_title_boost_night_mode_disable_with_cob">COB &gt; 0 时禁用夜间模式</string>
+    <string name="pref_title_boost_night_mode_disable_with_low_tt">低临时目标时禁用夜间模式</string>
+    <string name="pref_title_boost_night_mode_enabled">启用夜间模式</string>
+    <string name="pref_title_boost_night_mode_end">夜间模式结束时间</string>
+    <string name="pref_title_boost_night_mode_start">夜间模式开始时间</string>
+    <string name="pref_title_boost_post_exercise_min_duration">最短运动持续时间（分钟）</string>
+    <string name="pref_title_boost_post_exercise_recovery_enabled">启用运动后恢复</string>
+    <string name="pref_title_boost_post_exercise_recovery_hours">恢复窗口时长（小时）</string>
+    <string name="pref_title_boost_post_exercise_recovery_scale">SMB 削减系数</string>
+    <string name="pref_title_boost_post_exercise_recovery_target">恢复临时目标</string>
+    <string name="pref_title_boost_postrescue_tight_ramp_trial">补救后收紧爬升试验</string>
+    <string name="pref_title_boost_pre_sleep_lead_min">睡前提前时间（分钟）</string>
+    <string name="pref_title_boost_scale_value">Boost 缩放值</string>
+    <string name="pref_title_boost_sleep_history">睡眠历史（内部）</string>
+    <string name="pref_title_boost_sleep_hysteresis_min">睡眠确认窗口（分钟）</string>
+    <string name="pref_title_boost_sleep_in_hours">睡懒觉时长（小时）</string>
+    <string name="pref_title_boost_sleep_in_steps">睡懒觉步数</string>
+    <string name="pref_title_boost_sleep_state">睡眠状态（内部）</string>
+    <string name="pref_title_boost_start_time">Boost 开始时间</string>
+    <string name="pref_title_boost_trial_seed">试验种子（内部）</string>
+    <string name="pref_title_boost_use_tdd">启用基于 TDD 的 ISF</string>
+    <string name="pref_title_boost_v2_chart_faithful">使用精确 V2 图表样式</string>
+    <string name="pref_title_boost_v5_active_dosing">主动给药</string>
+    <string name="pref_title_boost_v5_aggression">激进度</string>
+    <string name="pref_title_boost_v5_aggressive_early_confirm">激进提前确认</string>
+    <string name="pref_title_boost_v5_autoconfig_done">自动配置已完成（内部）</string>
+    <string name="pref_title_boost_v5_autoconfig_pending">自动配置待处理（内部）</string>
+    <string name="pref_title_boost_v5_autoconfig_summary">自动配置摘要（内部）</string>
+    <string name="pref_title_boost_v5_committed_cap_u">已承诺剂量上限（U）</string>
+    <string name="pref_title_boost_v5_composed_floor_active">第 3 阶段组合制动下限</string>
+    <string name="pref_title_boost_v5_confirm_tranche">确认分批</string>
+    <string name="pref_title_boost_v5_confirmed_cap_u">已确认剂量上限（U）</string>
+    <string name="pref_title_boost_v5_fast_carb_confirm">快碳水快速通道</string>
+    <string name="pref_title_boost_v5_hypo_caution">低血糖谨慎</string>
+    <string name="pref_title_boost_v5_primer_bolus_mode">强制大剂量预注</string>
+    <string name="pref_title_boost_v5_primer_cap_u">加速预注（U）</string>
+    <string name="pref_title_boost_v5_primer_tbr_fallback">预注回退为临时基础率</string>
+    <string name="pref_title_boost_v5_redrive_baseline">重新驱动基线（内部）</string>
+    <string name="pref_title_boost_v5_redrive_history">重新驱动历史（内部）</string>
+    <string name="pref_title_boost_v5_redrive_summary">重新驱动摘要（内部）</string>
+    <string name="pref_title_boost_v5_sensitivity">进餐检测灵敏度</string>
+    <string name="pref_title_boost_v5_state">状态（内部）</string>
+    <string name="pref_title_boost_v5_tranche_fraction">确认分批：立即给予的比例</string>
+    <string name="pref_title_boost_v5_tranche_threshold">确认分批：释放阈值</string>
+    <string name="pref_title_boost_v5_velocity_budget_active">速度预算下限（高值尾部）</string>
+    <string name="pref_title_boost_v6_pre_meal_lead_min">餐前提前时间（分钟）</string>
+    <string name="pref_title_boost_v6_pre_meal_target">餐前预判目标</string>
+    <string name="pref_title_boost_v6_pre_meal_target_mgdl">餐前目标（mg/dL）</string>
+    <string name="pref_title_boost_vwa_tdd_shadow_state">VWA TDD 影子状态（内部）</string>
+    <string name="pref_title_boost_wake_hr_hysteresis_min">醒来确认窗口（分钟）</string>
+    <!--    Boost summaries-->
+    <string name="pref_summary_boost_insulin_req_pct">以 SMB 形式输注算法所确定胰岛素量的百分比。默认：50</string>
+    <string name="pref_summary_boost_bolus">Boost 单次大剂量上限。默认：2.5 U</string>
+    <string name="pref_summary_boost_scale">计算出的 Boost 胰岛素量的乘数。值 ≥ 3 时禁用 Boost。默认：1.0</string>
+    <string name="pref_summary_boost_max_iob">加速大剂量输注的最大 IOB。超过此值时使用常规 oref1。默认：1.0 U</string>
+    <string name="pref_summary_boost_enable_circadian_isf">根据昼夜节律模型应用一天中不同时段的 ISF 调整</string>
+    <string name="pref_summary_boost_allow_with_high_tt">高临时目标（运动）激活时允许使用 Boost</string>
+    <string name="pref_summary_boost_use_tdd">使用对数公式根据每日总剂量计算 ISF。禁用时直接使用配置文件 ISF</string>
+    <string name="pref_summary_boost_adjust_sensitivity">使用 24 小时 TDD / 7 天 TDD 调整灵敏度比，类似 Autosens。需要基于 TDD 的 ISF，当基于 TDD 的 ISF 关闭以及首次启用 Boost 时会自动关闭。建议开始时保持关闭</string>
+    <string name="pref_summary_boost_autosens_when_no_tdd">当基于 TDD 的 ISF 关闭时，让 Autosens 调整基础率、目标和碳水比。需要启用 Autosens。如果此项也关闭，则不进行任何灵敏度调整。基于 TDD 的 ISF 开启时此项无效，因为此时由 TDD 负责灵敏度。</string>
+    <string name="pref_summary_boost_dyn_isf_normal_target">ISF 计算的参考血糖目标。默认：99</string>
+    <string name="pref_summary_boost_dyn_isf_velocity" formatted="false">控制当前血糖水平对 ISF 的影响程度。100% 时，ISF 完全根据血糖调整（血糖越高，ISF 越强）。50% 时，仅应用一半的血糖驱动调整。0% 时，血糖无影响，ISF 保持在目标水平值，与当前血糖无关。需要基于 TDD 的 ISF：当基于 TDD 的 ISF 关闭时自动设为 0，开启时设为 100。默认：100</string>
+    <string name="pref_summary_boost_dyn_isf_bg_cap">高于此值的血糖会被柔化，以降低极高血糖时 ISF 的激进程度。默认：210</string>
+    <string name="pref_summary_boost_dyn_isf_adjustment_factor">按此百分比缩放计算出的 TDD。默认：100</string>
+    <string name="pref_summary_boost_inactivity_steps">低于此步数/小时视为不活动。默认：500</string>
+    <string name="pref_summary_boost_inactivity_pct">不活动时的配置文件百分比。默认：130</string>
+    <string name="pref_summary_boost_sleep_in_hours">夜间模式结束时间之后，如果您仍在床上，夜间模式可以继续保持的小时数。当最近一小时的步数达到睡懒觉步数时，夜间模式会提前结束。因此，若结束时间为 06:30 且此处设为 2 小时，只要手机或手表未检测到走动，夜间模式可运行至 08:30。设为 0 则夜间模式在结束时间结束（如果启用了自动检测睡眠，在检测到您睡着时仍可延长）。默认：2</string>
+    <string name="pref_summary_boost_sleep_in_steps">夜间模式结束时间之后，最近一小时步数低于此值时视为您仍在床上，夜间模式最多保持睡懒觉时长。默认：250</string>
+    <string name="pref_summary_boost_activity_steps5">5 分钟内步数超过此值视为活动。默认：420</string>
+    <string name="pref_summary_boost_activity_steps15">15 分钟内步数超过此值视为活动。默认：800</string>
+    <string name="pref_summary_boost_activity_steps30">30 分钟内步数超过此值视为活动。默认：1200</string>
+    <string name="pref_summary_boost_activity_steps60">60 分钟内步数超过此值视为活动。默认：1800</string>
+    <string name="pref_summary_boost_activity_pct">活动时的配置文件百分比。默认：80</string>
+    <string name="pref_summary_boost_hr_integration_enabled">使用心率数据来区分运动类型（有氧与抗阻），并验证步数信号。需要可穿戴设备向 AAPS 发送心率数据。该功能需手动开启；如果没有近期心率数据，则回退为仅使用步数检测。</string>
+    <string name="pref_summary_boost_hr_max_bpm">用于 Karvonen 区间计算的最大心率（次/分）。标准估算：220 减去年龄。年龄未知时，默认 180 次/分对成年人较为保守。范围 150–220。</string>
+    <string name="pref_summary_boost_hr_resting_bpm">用于 Karvonen 心率储备法的静息心率（次/分）。请在早晨起床前测量。默认 60 次/分。范围 30–100。</string>
+    <string name="pref_summary_boost_hr_window_minutes">用于运动分类的近期心率数据平均时长（分钟）。默认 15 分钟可获得稳定读数。范围 5–60 分钟。</string>
+    <string name="pref_summary_boost_hr_stress_detection">检测无运动时的心率升高，作为可能的压力或疾病。当心率处于 2 区以上但步数很低时，降低胰岛素激进程度（提高目标）。独立的可选项；如出现误报请关闭。</string>
+    <string name="pref_summary_boost_post_exercise_recovery_enabled">运动后自动设置高临时目标并降低 SMB 激进程度，以防止延迟性低血糖</string>
+    <string name="pref_summary_boost_post_exercise_recovery_hours">运动结束后恢复临时目标和 SMB 削减保持激活的时长。证据支持 1–4 小时；默认 2 小时覆盖主要风险窗口（Riddell 等）</string>
+    <string name="pref_summary_boost_post_exercise_recovery_target">恢复窗口期间的血糖目标。ATTD 2020 共识建议有氧运动后为 7–10 mmol/L（126–180 mg/dL）；默认 8.0 mmol/L / 144 mg/dL</string>
+    <string name="pref_summary_boost_post_exercise_recovery_scale" formatted="false">恢复窗口期间应用于 boost_bolus 和 boost_scale 的乘数（0.0–1.0）。0.5 = 削减 50%。即使手动取消临时目标也会生效。</string>
+    <string name="pref_summary_boost_post_exercise_min_duration">仅当检测到运动持续至少这么多分钟时才触发恢复。可避免短暂活动爆发造成的误触发。默认：10 分钟。</string>
+    <string name="pref_summary_boost_night_mode_enabled">在夜间时段血糖接近目标时禁用 SMB</string>
+    <string name="pref_summary_boost_night_mode_start">夜间模式窗口开始时间（24 小时制 HH:mm）。默认：22:00</string>
+    <string name="pref_summary_boost_night_mode_end">夜间模式窗口结束时间（24 小时制 HH:mm），按手机所在时区。若步数持续较低，夜间模式可在此之后继续最多睡懒觉时长。默认：07:00</string>
+    <string name="pref_summary_boost_night_mode_bg_offset">当血糖低于配置文件目标加上此偏移量时禁用 SMB。默认：1.5 mmol/L（27 mg/dL）</string>
+    <string name="pref_summary_boost_night_mode_disable_with_cob">若有活性碳水，则在夜间模式期间允许 SMB</string>
+    <string name="pref_summary_boost_night_mode_disable_with_low_tt">当临时目标低于配置文件目标时，在夜间模式期间允许 SMB</string>
+    <string name="pref_summary_boost_night_mode_auto_by_sleep">开启时，除时间窗口外，睡眠状态（心率 + 步数）也会驱动夜间模式。会在夜间模式开始前按「睡前提前时间」提前进入睡觉前状态（PRE_SLEEP），以限制睡前 IOB；如果仍在睡眠，则会在夜间模式结束后继续保持。醒来需要心率上升和步数活动同时满足（仅血糖趋势不会唤醒）。需要心率来源（Wear OS / Garmin）。</string>
+    <string name="pref_summary_boost_pre_sleep_lead_min">在夜间模式开始前多少分钟进入 PRE_SLEEP 并启用夜间模式 SMB 抑制。默认 60。</string>
+    <string name="pref_summary_boost_sleep_hysteresis_min">心率和步数条件必须持续这么多分钟才确认进入睡眠（SLEEPING）。默认 10。</string>
+    <string name="pref_summary_boost_wake_hr_hysteresis_min">心率 &gt; 1.25× 静息心率且步数 ≥ 100 两项条件必须同时持续这么多分钟才退出睡眠（SLEEPING）。默认 5。</string>
+    <string name="pref_summary_boost_health_connect_hr_enabled">按轮询周期从 Android Health Connect 读取心率。可让 Garmin Connect / Wear OS 的心率持续流入 Boost（包括夜间），无需手表表盘主动拉取血糖。需要用户安装 Health Connect（Android &lt; 14）并授予读取心率权限。请打开 Health Connect 设置进行授权。</string>
+    <string name="pref_summary_boost_health_connect_poll_min">查询 Health Connect 新心率记录的频率。越低数据越新，但稍耗电。默认 5。</string>
+    <string name="pref_summary_boost_activity_shadow_enabled" formatted="false">仅记录：绝不改变给药。从 Health Connect 读取每日步数（单一来源，已去重），学习您的个人步数基线，并将活动/不活动灵敏度修正将会产生的结果记录到 Nightscout（例如高活动日之后的“wouldΔISF +12%”）。需要授予 Health Connect 读取步数权限。用于为未来功能收集数据。</string>
+    <string name="pref_summary_boost_cumulative_smb_cap60_min">在任何连续的 60 分钟窗口内可输注的 SMB 胰岛素总量（U）。用于在持续上升期间限制胰岛素叠加。设为 0 可禁用。出厂默认：10 U（非约束性）；自动配置会根据您自己的历史收紧该值（已确认上限 + 2× 已承诺上限）。</string>
+    <string name="pref_summary_boost_post_rescue_tight_ramp_trial" formatted="false">用户内试验。在随机化治疗日，补救后反弹防护上限设为 60%，并在整个窗口内生效，而不是在高于 170 mg/dL 时关闭。两种分支输注的胰岛素都不会多于当前行为。除非您已入组，否则请保持关闭。</string>
+    <string name="pref_summary_boost_v5_aggression">缩放进餐确认（CONFIRMED）时的追赶剂量。1.0 = 校准默认值；更低 = 更温和的确认剂量，更高 = 更激进。范围 0.7-1.3。</string>
+    <string name="pref_summary_boost_v5_hypo_caution">ML 低血糖风险抑制下限的乘数。1.0 = 默认；对于低血糖感知障碍或近期发生严重低血糖者，可提高至 2.0。范围 1.0-2.0。</string>
+    <string name="pref_summary_boost_v5_sensitivity">缩放每个周期的胰岛素（激进）预算。1.0 = 默认；敏感用户低于 1.0，抵抗用户高于 1.0。范围 0.8–1.2。</string>
+    <string name="pref_summary_boost_v5_confirmed_cap_u">已确认进餐 SMB 的硬性上限。默认：2.5 U</string>
+    <string name="pref_summary_boost_v5_committed_cap_u">每周期已承诺进餐 SMB 的硬性上限。默认：0.5 U</string>
+    <string name="pref_summary_boost_v5_fast_carb_confirm">当血糖上升既急剧又在加速，且进餐评分予以印证（并且您清醒、未在运动）时，Boost 会在一个周期内确认进餐，而无需等待——这样快碳水能提前约 15 分钟得到覆盖。已通过回放验证，避免在睡眠或受压时触发。关闭此选项可恢复标准的观察-确认时序。</string>
+    <string name="pref_summary_boost_v5_aggressive_early_confirm">当其信号在连续两个周期内达到确认强度时，再提前一个周期确认进餐——同样的剂量，略早一些给予。由于它偶尔会对本会消退的上升做出承诺，会增加一点胰岛素，因此仅对近期低血糖暴露远在目标范围内的用户自动设置。默认关闭；自动配置会在安全的情况下开启。保持关闭（或关闭它）可维持标准确认时序。</string>
+    <string name="pref_summary_boost_v5_composed_floor_active" formatted="false">在血糖高于 160 mg/dL 且最终血糖高于目标的活跃进餐会话期间，对组合软制动乘数强制实施 25% 的下限——修复软制动叠加导致进餐中期剂量低于泵步进而为零的问题（2026 年 7 月）。所有硬性门控和剂量上限仍然适用。默认关闭。强制低血糖门控：仅当您近 14 天低于 63 mg/dL（3.5 mmol/L）的时间低于 2.0% 且低于 70 mg/dL 的时间低于 3.5% 时，该下限才会生效——由于它会增加胰岛素，若任一低血糖暴露指标更高则保持抑制（即使此项开启），当两者都回落到各自限值以下时会自动重新生效。</string>
+    <string name="pref_summary_boost_v5_velocity_budget_active" formatted="false">当您高于 180 mg/dL 但 oref 计算出无需额外胰岛素（它预测您会随体内已有胰岛素下降）时，这会输注一个小的保持量——最多 0.5 U，受已承诺上限和 IOB 余量限制——让高血糖稍微更快下降。它有意在该高值尾部比基础算法多给一点，因此适合希望对持续高血糖采取更坚决响应的用户。排除减速中的高血糖、睡眠以及补救后窗口；所有硬性低血糖门控仍然适用。默认关闭。使用与制动下限相同的强制低血糖门控：仅当近 14 天低于 63 mg/dL 的时间低于 2.0% 且低于 70 mg/dL 的时间低于 3.5% 时才生效，任一指标升高则自动暂停。</string>
+    <string name="pref_summary_boost_v5_primer_cap_u">在观察（OBSERVING）阶段针对持续上升输注的安全早期预注——实现更早的进餐响应。累加至该基数；任何按速度缩放的多余量会从确认（CONFIRMED）承诺剂量中扣除（是移动而非增加）。0 = 关闭。自动配置会推导每用户的值。</string>
+    <string name="pref_summary_boost_v5_primer_bolus_mode">覆盖：即使自动配置为您选择了可回撤的临时基础率回退（适用于易低血糖用户），也以大剂量形式输注加速预注。下限和承诺剂量扣减不受影响。默认关闭（遵循自动配置路由）。</string>
+    <string name="pref_summary_boost_v5_confirm_tranche">实验性功能，默认关闭。拆分为确认承诺，在确认周期给予一部分，其余保留十分钟，仅当上升持续时才释放。它只会比不启用时输注更少的胰岛素，绝不会更多。被保留的剩余量若因滚动累计上限已用尽或睡眠门控关闭而无法输注，则视为决定不释放。</string>
+    <string name="pref_summary_boost_v5_tranche_fraction">在确认周期输注的确认剂量所占比例。其余部分被保留。设为 1.0 可使分批失效而无需关闭该功能。</string>
+    <string name="pref_summary_boost_v5_tranche_threshold">当规则的概率超过此值时释放剩余量。越高则保留越多。自动配置会在过去 45 天内至少有 15 次明确走高或保持低位的确认事件（每类至少 5 次）时，根据您自己的确认事件设置该值。当您的事件支持时它会提高该值，目前不会降低。您在此处自行设置的值会被保留；将其设回 0.48 可交还给自动配置。</string>
+    <string name="pref_summary_boost_v6_pre_meal_target">实验性：学习您的习惯进餐时间（来自 Boost 进餐承诺），并在学到的进餐前不久应用低目标，使碳水摄入时胰岛素已在起效。运动和运动后恢复会覆盖此设置。</string>
+    <string name="pref_summary_boost_v6_pre_meal_target_mgdl">餐前窗口期间应用的低目标。越低 = 更多提前胰岛素。默认：72 mg/dL（4.0 mmol）。</string>
+    <string name="pref_summary_boost_v6_pre_meal_lead_min">在学到的进餐前多少分钟开启低目标窗口。该窗口在进餐前 45 分钟关闭。默认：60 分钟。</string>
+    <string name="pref_title_boost_enable_percent_scale">启用 Boost 百分比缩放</string>
+    <string name="pref_title_boost_percent_scale_factor">百分比缩放系数</string>
+    <string name="pref_summary_boost_percent_scale">血糖在 108-180 mg/dL 且增量上升时，用于基于百分比的 Boost 定量的最大缩放系数。默认：200</string>
+    <string name="pref_summary_boost_enable_percent_scale">当血糖 108-180 mg/dL 且增量上升时缩放 SMB</string>
 </resources>

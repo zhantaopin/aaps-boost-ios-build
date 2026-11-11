@@ -54,7 +54,15 @@ object StepService : SensorEventListener {
 
     @Synchronized override fun onSensorChanged(sensorEvent: SensorEvent?) {
         sensorEvent ?: return
-        onStepCount(sensorEvent.values[0].toInt())
+        // Standalone watches often expose only a step detector (one event per step) and no cumulative
+        // counter. Counting detector events keeps the same cumulative model the rest of this class uses.
+        if (sensorEvent.sensor.type == Sensor.TYPE_STEP_DETECTOR) onStepDetected()
+        else onStepCount(sensorEvent.values[0].toInt())
+    }
+
+    /** One step-detector event: advance the cumulative count by one so every window keeps working. */
+    @Synchronized internal fun onStepDetected() {
+        onStepCount(if (previousStepCount < 0) 1 else previousStepCount + 1)
     }
 
     /** One cumulative-since-boot reading from the step counter. Split out so tests can feed readings. */

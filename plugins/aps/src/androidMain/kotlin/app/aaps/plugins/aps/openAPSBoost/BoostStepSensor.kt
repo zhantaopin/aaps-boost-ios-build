@@ -38,17 +38,23 @@ object BoostStepSensor {
                 return
             }
             val sensorManager = context.applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            // The cumulative counter is preferred; watches without it usually expose a step detector,
+            // one event per step, which StepService accumulates into the same running count.
             val stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+                ?: sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
             if (stepSensor == null) {
                 aapsLogger.warn(LTag.APS, "Step counter sensor not available on this device")
                 return
             }
             if (registered.compareAndSet(false, true)) {
                 sensorManager.registerListener(StepService, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
-                aapsLogger.debug(LTag.APS, "Step counter sensor registered for Boost plugin")
+                aapsLogger.debug(LTag.APS, "Step sensor registered for Boost plugin: ${if (stepSensor.type == Sensor.TYPE_STEP_COUNTER) "counter" else "detector"}")
             }
         } catch (e: Exception) {
             aapsLogger.error(LTag.APS, "Failed to register step counter sensor", e)
         }
     }
+
+    /** True once the step sensor listener was registered in this process. Read by the sensor self-check. */
+    fun isRegistered(): Boolean = registered.get()
 }

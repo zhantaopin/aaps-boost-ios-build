@@ -11,6 +11,8 @@ enum class IntNonKey(
 
     ObjectivesManualEnacts("ObjectivesmanualEnacts", 0),
     TddCycleOffset("tdd_cycle_offset", 0),
+    // app.aaps.core.interfaces.logging.LogLevel ordinal: 0=OFF, 1=WARN, 2=INFO (default), 3=DEBUG.
+    LogLevel("log_level", 2),
     // Boost
     BoostV5AutoConfigSchemaVersion("boost_v5_autoconfig_schema_version", 0),
     BoostV5RedriveSchemaVersion("boost_v5_redrive_schema_version", 0),

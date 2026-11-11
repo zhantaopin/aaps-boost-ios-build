@@ -149,6 +149,7 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
 
     private val pluginStore get() = metroGraphs.pluginStore
     private val aapsLogger get() = metroGraphs.aapsLogger
+    private val loggerUtils get() = metroGraphs.loggerUtils
     private val versionCheckersUtils get() = metroGraphs.versionCheckerUtils
     private val sp get() = metroGraphs.keyValueStore
     private val preferences get() = metroGraphs.preferences
@@ -299,6 +300,9 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
         setBuildIdentityKeys()
 
         // Here should be everything injected
+        // Before the first log line: the level the user picked last time (OFF has to mean silent
+        // from the very start, not once someone visits the maintenance sheet again).
+        loggerUtils.initializeLogLevel()
         aapsLogger.debug("onCreate")
         storage.notes.forEach { aapsLogger.info(LTag.CORE, it) }
         AndroidStorage.onSaveFailure = { aapsLogger.error(LTag.CORE, "Settings could not be saved, the next change tries again: ${it.message}") }

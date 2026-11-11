@@ -249,7 +249,13 @@ class SceneListViewModel(
         val state = _dialogState.value as? DialogState.ConfirmActivation ?: return
         _dialogState.value = null
         // Confirm the MASTER's prepared scene: activate it exactly once (master local / client round-trip).
-        viewModelScope.launch { sceneActions.commitStart(state.bolusId) }
+        viewModelScope.launch {
+            val outcome = sceneActions.commitStart(state.bolusId)
+            // On a client the round-trip already raised the app-level modal with the master's text;
+            // only the master-local path has nobody else to say it.
+            if (outcome is ActionProgress.Rejected && !config.AAPSCLIENT)
+                _dialogState.value = DialogState.ValidationError(outcome.detail ?: rh.gs(outcome.reason.failText()))
+        }
     }
 
     /**

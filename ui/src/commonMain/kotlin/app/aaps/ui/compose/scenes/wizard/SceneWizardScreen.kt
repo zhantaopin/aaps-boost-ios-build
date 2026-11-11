@@ -16,6 +16,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -23,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTopAppBar
+import app.aaps.core.ui.compose.LocalImeSubmit
 import app.aaps.core.ui.compose.metroViewModel
 import app.aaps.core.ui.compose.pump.StepProgressIndicator
 import app.aaps.core.ui.compose.stringResource
@@ -66,6 +68,8 @@ fun SceneWizardScreen(
             }
 
             // Step content with animation
+            // The keyboard's Done key moves to the next step, so one tap finishes a number field.
+            CompositionLocalProvider(LocalImeSubmit provides onNext) {
             AnimatedContent(
                 targetState = state.currentStep,
                 transitionSpec = {
@@ -135,6 +139,7 @@ fun SceneWizardScreen(
                         }
                     )
                 }
+            }
             }
         }
     }

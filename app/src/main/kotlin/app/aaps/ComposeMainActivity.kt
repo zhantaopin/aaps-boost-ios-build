@@ -85,6 +85,7 @@ import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
+import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
@@ -143,7 +144,6 @@ import io.reactivex.rxjava3.disposables.CompositeDisposable
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import app.aaps.core.ui.R as CoreUiR
-import app.aaps.core.ui.search.SearchableItem
 
 class ComposeMainActivity : MetroAppCompatActivity() {
 
@@ -388,6 +388,29 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             boostOverviewOpenedAtStart = true
         }
 
+        // Boost: on a first run the setup wizard opens over the main screen before this screen gets its
+        // turn to open the Boost overview, so finishing it used to land on the classic overview. The
+        // wizard-covered case is recognised by its processed flag still being unset when it opens, so a
+        // wizard opened later from the menu does not pull the user out of wherever they were.
+        LaunchedEffect(navController) {
+            var firstRunWizardSeen = false
+            navController.currentBackStackEntryFlow.collect { entry ->
+                when (entry.destination.route) {
+                    AppRoute.SetupWizard.route -> {
+                        firstRunWizardSeen = !preferences.get(BooleanNonKey.GeneralSetupWizardProcessed)
+                    }
+
+                    AppRoute.Main.route          -> if (firstRunWizardSeen) {
+                        firstRunWizardSeen = false
+                        if (preferences.get(BooleanKey.OverviewUseBoostOverviewV2))
+                            navController.navigate(AppRoute.BoostV2Overview.route) { launchSingleTop = true }
+                    }
+
+                    AppRoute.BoostV2Overview.route -> firstRunWizardSeen = false
+                }
+            }
+        }
+
         // Boost widget tap: open the Boost V2 overview over the main screen.
         val openBoostOverview by _openBoostOverview
         LaunchedEffect(openBoostOverview) {
@@ -395,6 +418,19 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 navController.navigate(AppRoute.BoostV2Overview.route) { launchSingleTop = true }
                 _openBoostOverview.value = false
             }
+        }
+
+        // Boost: the maintenance sheet and the about dialog live in the main overview, so opening either
+        // from the Boost screen pops that destination first. Remember why, and go back to it afterwards,
+        // unless the user navigated somewhere else out of the sheet.
+        var returnToBoostAfterMainSheet by rememberSaveable { mutableStateOf(false) }
+        val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
+        LaunchedEffect(mainUiState.showMaintenanceSheet, mainUiState.showAboutDialog) {
+            if (!returnToBoostAfterMainSheet) return@LaunchedEffect
+            if (mainUiState.showMaintenanceSheet || mainUiState.showAboutDialog) return@LaunchedEffect
+            returnToBoostAfterMainSheet = false
+            if (navController.currentDestination?.route == AppRoute.Main.route)
+                navController.navigate(AppRoute.BoostV2Overview.route) { launchSingleTop = true }
         }
 
         // Track last navigated route as a Crashlytics custom key for crash reports
@@ -631,8 +667,10 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             composable(AppRoute.BoostV2Overview.route) {
                 val onBoostNavigate: (NavigationRequest) -> Unit = { request ->
                     // These two are sheets of the main overview, which is not composed under this screen.
-                    if (request is NavigationRequest.Element && (request.type == ElementType.MAINTENANCE || request.type == ElementType.ABOUT))
+                    if (request is NavigationRequest.Element && (request.type == ElementType.MAINTENANCE || request.type == ElementType.ABOUT)) {
+                        returnToBoostAfterMainSheet = true
                         navController.popBackStack(AppRoute.Main.route, inclusive = false)
+                    }
                     handleNavigationRequest(request, navController)
                 }
                 BoostOverviewHost(
@@ -643,18 +681,12 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     loopActionViewModel = loopActionViewModel,
                     scenesViewModel = scenesViewModel,
                     manageViewModel = manageViewModel,
-                    searchViewModel = searchViewModel,
                     // Back from the configuration screen recomposes this destination, so a change shows.
                     panelPlugins = remember { boostPanelPlugins(activePlugin.getPluginsList()) },
                     notificationManager = notificationManager,
                     pumpCommunicationStatus = pumpCommunicationStatus,
                     onActionsError = { comment, title -> uiInteraction.runAlarm(comment, title, AlarmSound.BOLUS_ERROR) },
                     onNavigate = onBoostNavigate,
-                    onSearchResultClick = { entry ->
-                        val item = entry.item
-                        if (item is SearchableItem.Dialog) onBoostNavigate(NavigationRequest.Element(item.elementType))
-                        else handleSearchResultClick(entry, navController)
-                    },
                     onBoostDetails = { activePlugin.activeAPS?.let { aps -> aps::class.simpleName }?.let { handleNavigationRequest(NavigationRequest.Plugin(it), navController) } },
                     onNotificationActionClick = { notification -> handleNotificationAction(notification.id, navController) }
                 )
@@ -740,12 +772,18 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             preferences.observe(BooleanKey.OverviewKeepScreenOn).collect { setupWakeLock() }
         }
         // A rebuild asked for by code that cannot reach this activity: `MainApp` once Android has applied a
-        // new language, an import applying its settings. Android answers it by recreating; the view models
-        // go too, see onDestroy.
+        // new language, an import applying its settings. The view models go too, see onDestroy.
         lifecycleScope.launch {
             uiRestart.signal.drop(1).collect {
                 rebuildingForRestart = true
-                recreate()
+                // recreate() drops the whole task to the launcher on some Android 8/9 watches: the window
+                // is gone before the system brings the recreated activity back. Relaunching a fresh task
+                // explicitly keeps AAPS in front.
+                startActivity(
+                    Intent(this@ComposeMainActivity, ComposeMainActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                )
+                finish()
             }
         }
     }

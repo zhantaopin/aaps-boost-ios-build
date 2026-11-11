@@ -951,7 +951,15 @@ class MainViewModel(
                             // onOk (fast double-tap) is idempotent — the second commit hits an already-
                             // consumed id and is discarded.
                             title = title, message = "", confirmationLines = prepared.lines, icon = sceneIcon(sceneStore.getScene(sceneId)?.icon),
-                            onOk = { appScope.launch { sceneActions.commitStart(prepared.id) } })
+                            onOk = {
+                                appScope.launch {
+                                    val outcome = sceneActions.commitStart(prepared.id)
+                                    // The scene applies what it can and stays active; its detail names the
+                                    // actions that failed, so report it instead of dropping the result.
+                                    if (outcome is ActionProgress.Rejected)
+                                        rxBus.send(EventShowDialog.Ok(title = title, message = outcome.detail ?: rh.gs(outcome.reason.failText())))
+                                }
+                            })
                     )
 
                 is ActionProgress.Rejected ->

@@ -41,6 +41,7 @@ class ObjectivesComposeContent : ComposablePluginContent {
             onFakeModeToggle = viewModel::onFakeModeToggle,
             onReset = viewModel::onReset,
             onLearnAll = { viewModel.onLearnAll() },
+            onRequestLearnAll = viewModel::onRequestLearnAll,
             onStart = viewModel::onStart,
             onVerify = viewModel::onVerify,
             onRequestUnstart = viewModel::onRequestUnstart,
@@ -64,6 +65,16 @@ class ObjectivesComposeContent : ComposablePluginContent {
                 message = stringResource(ConstraintsStrings.doyouwantresetstart),
                 onConfirm = { viewModel.onConfirmUnstart(objectiveIndex) },
                 onDismiss = viewModel::onDismissUnstartDialog
+            )
+        }
+
+        // One-tap learn all: confirm first, it unlocks every safety gate at once.
+        if (state.pendingLearnAll) {
+            OkCancelDialog(
+                title = stringResource(ConstraintsStrings.objectives_learn_all_title),
+                message = stringResource(ConstraintsStrings.objectives_learn_all_message),
+                onConfirm = viewModel::onConfirmLearnAll,
+                onDismiss = viewModel::onDismissLearnAll
             )
         }
 

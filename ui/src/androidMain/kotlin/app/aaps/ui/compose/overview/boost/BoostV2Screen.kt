@@ -101,12 +101,11 @@ fun BoostV2Screen(
     uiState: BoostUiState,
     pumpStatus: String,
     actions: BoostActionsState,
+    activeScene: Boolean = false,
+    onSceneClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     chartContent: @Composable () -> Unit = {},
     panelTabs: @Composable () -> Unit = {},
-    searchActive: Boolean = false,
-    searchBar: @Composable (Modifier) -> Unit = {},
-    searchResults: @Composable () -> Unit = {},
     onMenu: () -> Unit = {},
     onBoostDetails: () -> Unit = {},
     onElement: (ElementType) -> Unit = {},
@@ -124,8 +123,8 @@ fun BoostV2Screen(
     ) {
         TopNavBar(
             uiState,
-            searchActive = searchActive,
-            searchBar = searchBar,
+            activeScene = activeScene,
+            onSceneClick = onSceneClick,
             onMenu = onMenu,
             onBoostDetails = onBoostDetails,
             onSettings = { onElement(ElementType.SETTINGS) },
@@ -203,7 +202,6 @@ fun BoostV2Screen(
                     )
                 }
             }
-            searchResults()
         }
     }
 
@@ -213,7 +211,15 @@ fun BoostV2Screen(
 // ── Top nav bar ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun TopNavBar(uiState: BoostUiState, searchActive: Boolean, searchBar: @Composable (Modifier) -> Unit, onMenu: () -> Unit, onBoostDetails: () -> Unit, onSettings: () -> Unit, onLoop: () -> Unit) {
+private fun TopNavBar(
+    uiState: BoostUiState,
+    activeScene: Boolean,
+    onSceneClick: () -> Unit,
+    onMenu: () -> Unit,
+    onBoostDetails: () -> Unit,
+    onSettings: () -> Unit,
+    onLoop: () -> Unit
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -223,40 +229,53 @@ private fun TopNavBar(uiState: BoostUiState, searchActive: Boolean, searchBar: @
         IconButton(onClick = onMenu) {
             Icon(Icons.Default.Menu, contentDescription = stringResource(CoreUiStrings.open_navigation), tint = BoostV2Colors.textPrimary)
         }
-        // The space beside the badge and AID status is too narrow to type in, so they give way while searching.
-        if (!searchActive) {
-            // BOOST badge → the active APS plugin's page, the V6 tab on 6.1.2
-            Text(
-                text = "${stringResource(UiStrings.boost_v2_badge)} ›",
-                color = BoostV2Colors.accent,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
+        // BOOST badge → the active APS plugin's page, the V6 tab on 6.1.2
+        Text(
+            text = "${stringResource(UiStrings.boost_v2_badge)} ›",
+            color = BoostV2Colors.accent,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            modifier = Modifier
+                .background(BoostV2Colors.accentFill)
+                .clickable(onClickLabel = stringResource(UiStrings.boost_v2_details)) { onBoostDetails() }
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+        // No search field in the Boost appearance: the space it took goes to the badge and AID status.
+        Spacer(Modifier.weight(1f))
+        // A scene is running: lit left of AID, and tappable for its name, time left and End.
+        if (activeScene) {
+            Box(
                 modifier = Modifier
-                    .background(BoostV2Colors.accentFill)
-                    .clickable(onClickLabel = stringResource(UiStrings.boost_v2_details)) { onBoostDetails() }
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            )
-        }
-        searchBar(Modifier.weight(1f).padding(horizontal = 8.dp))
-        if (!searchActive) {
-            // AID status + dot → loop dialog
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onLoop() }
+                    .size(28.dp)
+                    .clickable(onClickLabel = stringResource(CoreUiStrings.scene)) { onSceneClick() },
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = uiState.aidStatusText,
-                    color = BoostV2Colors.textPrimary,
-                    fontSize = 11.sp
-                )
-                Spacer(Modifier.width(4.dp))
                 Box(
                     Modifier
-                        .size(6.dp)
-                        .background(aidStatusColorV2(uiState.aidStatus))
+                        .size(width = 16.dp, height = 4.dp)
+                        .background(BoostV2Colors.accent, CircleShape)
                 )
             }
+            Spacer(Modifier.width(2.dp))
         }
+        // AID status + dot → loop dialog
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable { onLoop() }
+        ) {
+            Text(
+                text = uiState.aidStatusText,
+                color = BoostV2Colors.textPrimary,
+                fontSize = 11.sp
+            )
+            Spacer(Modifier.width(4.dp))
+            Box(
+                Modifier
+                    .size(6.dp)
+                    .background(aidStatusColorV2(uiState.aidStatus))
+            )
+        }
+        // Scenes are reached by the panel tab; their running state is the dot above.
         IconButton(onClick = onSettings) {
             Icon(Icons.Default.Settings, contentDescription = stringResource(CoreUiStrings.settings), tint = BoostV2Colors.textPrimary)
         }
@@ -597,11 +616,10 @@ fun BoostV2Route(
     graphViewModel: GraphViewModel,
     pumpStatus: String,
     actions: BoostActionsState,
+    activeScene: Boolean = false,
+    onSceneClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     panelTabs: @Composable () -> Unit = {},
-    searchActive: Boolean = false,
-    searchBar: @Composable (Modifier) -> Unit = {},
-    searchResults: @Composable () -> Unit = {},
     onMenu: () -> Unit = {},
     onBoostDetails: () -> Unit = {},
     onElement: (ElementType) -> Unit = {},
@@ -621,6 +639,8 @@ fun BoostV2Route(
         uiState = uiState,
         pumpStatus = pumpStatus,
         actions = actions,
+        activeScene = activeScene,
+        onSceneClick = onSceneClick,
         modifier = modifier,
         chartContent = {
             BoostChart(
@@ -633,9 +653,6 @@ fun BoostV2Route(
             )
         },
         panelTabs = panelTabs,
-        searchActive = searchActive,
-        searchBar = searchBar,
-        searchResults = searchResults,
         onMenu = onMenu,
         onBoostDetails = onBoostDetails,
         onElement = onElement,

@@ -35,6 +35,7 @@ import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.LocalDateUtil
+import app.aaps.core.ui.compose.longestScreenSideDp
 import app.aaps.core.ui.compose.formatMinutesAsDuration
 import app.aaps.core.ui.compose.navigation.icon
 import app.aaps.core.ui.compose.stringResource
@@ -57,6 +58,7 @@ internal fun ProfileCarouselCard(
     modifier: Modifier = Modifier
 ) {
     val dateUtil = LocalDateUtil.current
+    val compactCard = longestScreenSideDp() < 400
     // Check if active profile has modifications (percentage, timeshift, or duration)
     val isModified = activeProfileSwitch?.let { eps ->
         eps.originalPercentage != 100 || eps.originalTimeshift != 0L || eps.originalDuration != 0L
@@ -122,14 +124,14 @@ internal fun ProfileCarouselCard(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(if (compactCard) 10.dp else 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 // Profile name
                 Text(
                     text = profileName,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = if (compactCard) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = contentColor,
                     maxLines = 1,
@@ -139,55 +141,22 @@ internal fun ProfileCarouselCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Basal sum
-                Text(
-                    text = "∑ ${formatBasalSum(basalSum)}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = contentColor
-                )
-
-                // Error indicator (red, blocking) takes priority; otherwise a non-blocking amber
-                // "won't run on this pump" hint — the profile is valid and syncs, but its basal
-                // can't be delivered by the current pump.
-                if (hasErrors) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(CoreUiStrings.invalid),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
-                    )
-                } else if (pumpIncompatible) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(CoreUiStrings.profile_pump_incompatible_label),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Active indicator and percentage/timeshift
-                if (isActive && !hasErrors && !pumpIncompatible) {
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Show "ACTIVE -> Next: profile" when there's a next profile, otherwise just "ACTIVE"
-                    val activeText = if (hasDuration && nextProfileName != null) {
+                // Status texts, shared by both layouts: the compact card joins them into one line,
+                // the regular card keeps one line each.
+                val invalidText = stringResource(CoreUiStrings.invalid)
+                val pumpIncompatibleText = stringResource(CoreUiStrings.profile_pump_incompatible_label)
+                val activeText = if (isActive && !hasErrors && !pumpIncompatible) {
+                    if (hasDuration && nextProfileName != null) {
                         // Same "now → next" form as a scene that starts another one
                         stringResource(CoreUiStrings.scene_summary_with_chain, stringResource(UiStrings.active_profile_indicator), nextProfileName)
                     } else {
                         stringResource(UiStrings.active_profile_indicator)
                     }
-                    Text(
-                        text = activeText,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (isModified) contentColor else AapsTheme.generalColors.activeInsulinText,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    // Percentage, timeshift and remaining time for active profile
+                } else {
+                    null
+                }
+                // Percentage, timeshift and remaining time for the active profile
+                val activeDetails = if (isActive && !hasErrors && !pumpIncompatible) {
                     activeProfileSwitch?.let { eps ->
                         val timeshiftHours = T.msecs(eps.originalTimeshift).hours().toInt()
                         val timeshift = stringResource(
@@ -204,14 +173,78 @@ internal fun ProfileCarouselCard(
                         }
                         // Whole minutes, rounded down like the Overview chip, so both show the same number
                         val remainingText = if (remainingMs > 0L) formatMinutesAsDuration(T.msecs(remainingMs).mins().toInt()) else null
-                        val details = when {
+                        when {
                             remainingText != null && changes.isNotEmpty() -> stringResource(CoreUiStrings.value_with_remaining_time, changes, remainingText)
                             remainingText != null                         -> remainingText
                             else                                          -> changes
                         }
-                        if (details.isNotEmpty()) {
+                    } ?: ""
+                } else {
+                    ""
+                }
+
+                if (compactCard) {
+                    // An 86 dp card only fits the name and one more line, so the basal sum, the status
+                    // and the percentage share that line separated by spaces.
+                    val statusText = when {
+                        hasErrors          -> invalidText
+                        pumpIncompatible   -> pumpIncompatibleText
+                        activeText != null -> activeText
+                        else               -> ""
+                    }
+                    Text(
+                        text = listOf("∑ ${formatBasalSum(basalSum)}", statusText, activeDetails)
+                            .filter { it.isNotEmpty() }
+                            .joinToString(" "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
+                } else {
+                    // Basal sum
+                    Text(
+                        text = "∑ ${formatBasalSum(basalSum)}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = contentColor
+                    )
+
+                    // Error indicator (red, blocking) takes priority; otherwise a non-blocking amber
+                    // "won't run on this pump" hint — the profile is valid and syncs, but its basal
+                    // can't be delivered by the current pump.
+                    if (hasErrors) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = invalidText,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else if (pumpIncompatible) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = pumpIncompatibleText,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Active indicator and percentage/timeshift
+                    if (activeText != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = activeText,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (isModified) contentColor else AapsTheme.generalColors.activeInsulinText,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (activeDetails.isNotEmpty()) {
                             Text(
-                                text = details,
+                                text = activeDetails,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = contentColor
                             )
@@ -227,8 +260,8 @@ internal fun ProfileCarouselCard(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .height(4.dp),
+                        .padding(horizontal = 12.dp, vertical = if (compactCard) 2.dp else 8.dp)
+                        .height(if (compactCard) 3.dp else 4.dp),
                     color = contentColor,
                     trackColor = contentColor.copy(alpha = 0.3f)
                 )

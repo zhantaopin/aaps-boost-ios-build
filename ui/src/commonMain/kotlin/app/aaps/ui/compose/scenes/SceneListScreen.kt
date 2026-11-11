@@ -1,6 +1,7 @@
 package app.aaps.ui.compose.scenes
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -265,74 +267,63 @@ internal fun SceneCard(
     }
 
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AapsSpacing.large),
-            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = scene.isEnabled,
-                onCheckedChange = { onToggleEnabled() },
-                enabled = editEnabled,
-                // The name is a separate Text, so a screen reader heard only "checkbox, checked".
-                modifier = Modifier.semantics { contentDescription = scene.name }
-            )
-            Icon(
-                imageVector = SceneIcons.fromKey(scene.icon).icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(28.dp)
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = scene.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = nameColor
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isInvalid) MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                when {
-                    chainMissing            -> Text(
-                        text = stringResource(CoreUiStrings.scene_chain_target_missing),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
+        BoxWithConstraints {
+            // A 300-320 dp wide watch cannot fit the checkbox, the icon and three action buttons
+            // next to the text: the name column is left with ~40 dp and wraps one character per
+            // line. Below 360 dp the actions move to a second row instead.
+            val compact = maxWidth < 360.dp
 
-                    chainTargetName != null -> Text(
-                        text = stringResource(CoreUiStrings.scene_chain_indicator, chainTargetName),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                // Surface the activation gate reason (pump disconnected / no profile / etc.)
-                // so the user understands why the play button is disabled.
-                if (activationReason != null && !isActive) {
+            val titleBlock: @Composable (Modifier) -> Unit = { modifier ->
+                Column(modifier = modifier) {
                     Text(
-                        text = activationReason,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = scene.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = nameColor
                     )
-                }
-                // Surface the edit-lock reason (running scene / master offline) so the user understands why the
-                // edit/delete/checkbox actions are disabled — unless it just repeats the activation reason already
-                // shown above (a global master block sets both gates to the same text → would otherwise double up).
-                // In PLAY mode there is nothing to edit, so there is no reason to give.
-                val editReasonDuplicated = activationReason != null && !isActive && editLockReason == activationReason
-                if (editable && editLockReason != null && !editReasonDuplicated) {
                     Text(
-                        text = editLockReason,
+                        text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isInvalid) MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                        else MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    when {
+                        chainMissing            -> Text(
+                            text = stringResource(CoreUiStrings.scene_chain_target_missing),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+
+                        chainTargetName != null -> Text(
+                            text = stringResource(CoreUiStrings.scene_chain_indicator, chainTargetName),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    // Surface the activation gate reason (pump disconnected / no profile / etc.)
+                    // so the user understands why the play button is disabled.
+                    if (activationReason != null && !isActive) {
+                        Text(
+                            text = activationReason,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    // Surface the edit-lock reason (running scene / master offline) so the user understands why the
+                    // edit/delete/checkbox actions are disabled — unless it just repeats the activation reason already
+                    // shown above (a global master block sets both gates to the same text → would otherwise double up).
+                    // In PLAY mode there is nothing to edit, so there is no reason to give.
+                    val editReasonDuplicated = activationReason != null && !isActive && editLockReason == activationReason
+                    if (editable && editLockReason != null && !editReasonDuplicated) {
+                        Text(
+                            text = editLockReason,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
-            Row {
+
+            val actions: @Composable () -> Unit = {
                 if (isActive) {
                     IconButton(onClick = onDeactivate, enabled = masterReachable) {
                         Icon(Icons.Default.Stop, contentDescription = rowAction(CoreUiStrings.scene_deactivate, scene.name))
@@ -354,6 +345,62 @@ internal fun SceneCard(
                             Icon(Icons.Default.Delete, contentDescription = rowAction(CoreUiStrings.delete, scene.name))
                         }
                     }
+                }
+            }
+
+            if (compact) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(AapsSpacing.large)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = scene.isEnabled,
+                            onCheckedChange = { onToggleEnabled() },
+                            enabled = editEnabled,
+                            // The name is a separate Text, so a screen reader heard only "checkbox, checked".
+                            modifier = Modifier.semantics { contentDescription = scene.name }
+                        )
+                        Icon(
+                            imageVector = SceneIcons.fromKey(scene.icon).icon,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(AapsSpacing.medium))
+                        titleBlock(Modifier.weight(1f))
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        actions()
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(AapsSpacing.large),
+                    horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = scene.isEnabled,
+                        onCheckedChange = { onToggleEnabled() },
+                        enabled = editEnabled,
+                        // The name is a separate Text, so a screen reader heard only "checkbox, checked".
+                        modifier = Modifier.semantics { contentDescription = scene.name }
+                    )
+                    Icon(
+                        imageVector = SceneIcons.fromKey(scene.icon).icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    titleBlock(Modifier.weight(1f))
+                    Row { actions() }
                 }
             }
         }

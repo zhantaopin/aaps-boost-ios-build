@@ -629,7 +629,10 @@ class ClientControlReceiver(
         nsClientRepository.addLog("◄ CLIENTCTL", "scene.commit id=${message.bolusId} from ${entry.name}: ${if (activated) "activated" else "no-pending"}")
         return when {
             result is MasterActionExecutor.ConfirmResult.NoPending -> AckOutcome(AckStatus.Failed, FailureReason.NoPendingBolus.name)
-            err != null                                           -> AckOutcome(AckStatus.Failed, FailureReason.ExecutionFailed.name, err)
+            // The scene IS active: activation applies what it can and only reports the actions that
+            // failed. Reporting ExecutionFailed made the client say "not applied" while the master
+            // showed the scene running.
+            err != null                                           -> AckOutcome(AckStatus.Failed, FailureReason.PartialFailure.name, err)
             else                                                  -> AckOutcome(AckStatus.Ok, null)
         }
     }

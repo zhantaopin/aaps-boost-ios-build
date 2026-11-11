@@ -187,6 +187,20 @@ class ObjectivesViewModel(
         }
     }
 
+    /** The shortcut is destructive and irreversible from the UI, so the tap only opens a confirmation. */
+    fun onRequestLearnAll() {
+        _uiState.value = _uiState.value.copy(pendingLearnAll = true)
+    }
+
+    fun onDismissLearnAll() {
+        _uiState.value = _uiState.value.copy(pendingLearnAll = false)
+    }
+
+    fun onConfirmLearnAll() {
+        _uiState.value = _uiState.value.copy(pendingLearnAll = false)
+        onLearnAll()
+    }
+
     fun onStart(objectiveIndex: Int) {
         val objective = objectivesPlugin.objectives[objectiveIndex]
         receiverStatusStore.updateNetworkStatus()

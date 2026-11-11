@@ -31,6 +31,7 @@ import app.aaps.core.ui.compose.icons.IcBolus
 import app.aaps.core.ui.compose.icons.IcCarbs
 import app.aaps.core.ui.compose.navigation.color
 import app.aaps.core.ui.compose.navigation.icon
+import app.aaps.core.ui.compose.longestScreenSideDp
 import app.aaps.core.ui.compose.stringResource
 import app.aaps.ui.UiStrings
 
@@ -50,6 +51,7 @@ fun QuickWizardCarouselCard(
     modifier: Modifier = Modifier
 ) {
     val dateUtil = LocalDateUtil.current
+    val compactCard = longestScreenSideDp() < 400
     // Card colors
     val containerColor = if (isSelected) {
         MaterialTheme.colorScheme.secondaryContainer
@@ -94,21 +96,21 @@ fun QuickWizardCarouselCard(
                 tint = modeColor,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(16.dp)
-                    .size(28.dp)
+                    .padding(if (compactCard) 8.dp else 16.dp)
+                    .size(if (compactCard) 20.dp else 28.dp)
             )
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(if (compactCard) 10.dp else 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 // Button Text (main title)
                 Text(
                     text = entry.buttonText().ifEmpty { "?" },
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = if (compactCard) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
@@ -116,7 +118,7 @@ fun QuickWizardCarouselCard(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(if (compactCard) 2.dp else 8.dp))
 
                 // Carbs display
                 val carbsText = buildCarbsText(entry)

@@ -165,6 +165,7 @@
     <string name="clientcontrol_pending_partial_title">部分应用</string>
     <!-- %1$s = action label -->
     <string name="clientcontrol_pending_partial_format">%1$s 已应用，但某些操作无法执行。\n请检查当前状态。</string>
+    <string name="clientcontrol_pending_partial_detail_format">%1$s 已生效，但以下操作未能执行：\n%2$s</string>
     <string name="clientcontrol_pending_unconfirmed_title">无法确认</string>
     <!-- %1$s = action label, %2$s = reason. Sent but unconfirmed → will reconcile via sync-back -->
     <string name="clientcontrol_pending_unconfirmed_format">%1$s 已发送，但未收到确认。\n%2$s\n 如果主机应用了该操作，它将在此处显示。</string>
@@ -356,4 +357,39 @@
     <string name="cal_precheck_delta_too_high">血糖变化过快（每5分钟 Δ %1$s %3$s，限制为 %2$s）。请等待稳定。</string>
     <string name="cal_precheck_mark_sensor_change">标记传感器更换</string>
     <string name="graph_therapy_event_bg_with_note" comment="Shown when the user taps a BG check in the overview graph. %1$s = glucose with its unit, %2$s = the note the user wrote. Example: 6.1 mmol/L, before lunch">%1$s, %2$s</string>
+    <!--    Boost -->
+    <string name="boost_widget_description">Boost 算法小部件</string>
+    <string name="boost_widget_bobble_description" comment="Screen-reader name of the drawn glucose ring on the Boost widget. The ring shows the latest glucose value and its trend.">血糖和趋势</string>
+    <string name="insulin_curve_lyumjev_pd">Lyumjev PD 曲线（峰值取决于剂量）</string>
+    <string name="insulin_curve_lyumjev_pd_summary">Boost 糖动力学模型。DIA 固定为 8 小时，峰值由每次剂量的大小决定，因此无法编辑峰值和 DIA。</string>
+    <string name="insulin_lyumjev_pd_nickname">Lyumjev PD</string>
+    <string name="insulin_lyumjev_pd_concentration">Lyumjev PD 曲线仅适用于 U100 和 U200 胰岛素</string>
+    <string name="boost_overview_title">Boost 概览</string>
+    <string name="boost_v2_badge">BOOST</string>
+    <string name="boost_v2_details">打开 Boost 详情</string>
+    <string name="boost_v2_pump">泵</string>
+    <string name="boost_v2_reading">读数</string>
+    <string name="boost_v2_target">目标</string>
+    <string name="boost_v2_iob">IOB</string>
+    <string name="boost_v2_dynisf">DYNISF</string>
+    <string name="boost_v2_tdd">TDD</string>
+    <string name="boost_v2_profile">配置文件</string>
+    <string name="boost_v2_score">评分</string>
+    <string name="boost_v2_insulin">胰岛素</string>
+    <string name="boost_v2_calculator">计算器</string>
+    <string name="boost_v2_carbs">碳水</string>
+    <string name="boost_v2_treatment">治疗</string>
+    <string name="boost_v2_calibration">校准</string>
+    <string name="boost_v2_cgm">CGM</string>
+    <string name="boost_v2_accept_temp">接受临时</string>
+    <string name="boost_v2_chart_standard">标准</string>
+    <string name="boost_v2_chart_v2">V2</string>
+    <string name="boost_v2_hr_steps">心率 · 步数</string>
+    <string name="boost_v2_heart_rate">心率</string>
+    <string name="boost_v2_steps">步数</string>
+    <string name="boost_v2_dialog_iob_title">IOB</string>
+    <string name="boost_v2_dialog_dynisf_title">动态 ISF</string>
+    <string name="boost_v2_dialog_tdd_title">每日总剂量</string>
+    <string name="boost_v2_dialog_v5_title">Boost 决策</string>
+    <string name="boost_v2_dialog_exercise_title">运动 / 活动模式</string>
 </resources>

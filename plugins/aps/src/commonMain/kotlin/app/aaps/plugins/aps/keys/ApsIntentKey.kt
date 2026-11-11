@@ -29,5 +29,14 @@ enum class ApsIntentKey(
         title = ApsStrings.boost_hc_grant_title,
         summary = ApsStrings.boost_hc_grant_summary,
         preferenceType = PreferenceType.ACTIVITY
+    ),
+
+    // Boost: opens a read-only sensor self-check (steps + heart rate). The Compose screen is attached
+    // at runtime by the Boost plugin (withCompose), which has the sensor and database services.
+    BoostSensorCheck(
+        key = "boost_sensor_check",
+        title = ApsStrings.boost_sensor_check_title,
+        summary = ApsStrings.boost_sensor_check_summary,
+        preferenceType = PreferenceType.CLICK
     )
 }

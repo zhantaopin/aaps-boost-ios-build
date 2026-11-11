@@ -1,67 +1,73 @@
 package app.aaps.ui.compose.main
 
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import app.aaps.core.ui.CoreUiStrings
+import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.core.ui.compose.icons.IcSettingsOff
 import app.aaps.core.ui.compose.stringResource
-import app.aaps.ui.search.M3SearchBar
-import app.aaps.ui.search.SearchUiState
+import kotlinx.coroutines.delay
 
 /**
- * Main top bar with M3-style search bar.
- * Layout: [Menu] [----Search Bar----] [SimpleMode?] [Settings]
+ * Main top bar: menu on the left, the current time in the middle, settings on the right.
  *
- * @param searchUiState Current search UI state
+ * The search field the bar used to carry is gone on every device; the search pipeline is still
+ * wired, it simply has no entry point. On a 320dp watch the freed width goes to the clock.
+ *
  * @param onMenuClick Called when menu button is clicked
  * @param onPreferencesClick Called when preferences button is clicked
- * @param onSearchQueryChange Called when search query changes
- * @param onSearchClear Called when search query is cleared
- * @param onSearchActiveChange Called when search active state changes
  * @param isSimpleMode When true, shows a non-interactive simple-mode indicator next to Settings
  * @param modifier Modifier for the component
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainTopBar(
-    searchUiState: SearchUiState,
     onMenuClick: () -> Unit,
     onPreferencesClick: () -> Unit,
-    onSearchQueryChange: (String) -> Unit,
-    onSearchClear: () -> Unit,
-    onSearchActiveChange: (Boolean) -> Unit,
     isSimpleMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val dateUtil = LocalDateUtil.current
+    var now by remember { mutableLongStateOf(dateUtil.now()) }
+    LaunchedEffect(Unit) {
+        // Wake exactly on the minute, then every minute: no 1s polling on a watch.
+        while (true) {
+            delay(60_000L - (dateUtil.now() % 60_000L))
+            now = dateUtil.now()
+        }
+    }
+
     TopAppBar(
         title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(end = 8.dp)
-            ) {
-                M3SearchBar(
-                    query = searchUiState.query,
-                    isActive = searchUiState.isSearchActive,
-                    onQueryChange = onSearchQueryChange,
-                    onClearClick = onSearchClear,
-                    onActiveChange = onSearchActiveChange,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            Text(
+                text = dateUtil.timeString(now),
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         },
         navigationIcon = {
             IconButton(onClick = onMenuClick) {

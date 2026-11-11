@@ -37,6 +37,7 @@ import app.aaps.core.data.model.TTPreset
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.AapsTheme
+import app.aaps.core.ui.compose.longestScreenSideDp
 import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.core.ui.compose.LocalProfileUtil
 import app.aaps.core.ui.compose.formatMinutesAsDuration
@@ -112,6 +113,7 @@ fun TempTargetCarouselCard(
 
     // TT reason badge color
     val badgeColor = getTTReasonColor(reason)
+    val compactCard = longestScreenSideDp() < 400
 
     // Get icon drawable resource based on reason
     val icon = getTTReasonIcon(reason)
@@ -128,8 +130,8 @@ fun TempTargetCarouselCard(
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(8.dp)
-                    .size(32.dp),
+                    .padding(if (compactCard) 6.dp else 8.dp)
+                    .size(if (compactCard) 22.dp else 32.dp),
                 tint = badgeColor
             )
 
@@ -140,7 +142,7 @@ fun TempTargetCarouselCard(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(12.dp),
+                    .padding(if (compactCard) 6.dp else 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -152,7 +154,7 @@ fun TempTargetCarouselCard(
                 }
                 Text(
                     text = nameText,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = if (compactCard) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = contentColor,
                     maxLines = 1,
@@ -160,19 +162,19 @@ fun TempTargetCarouselCard(
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(if (compactCard) 2.dp else 6.dp))
 
                 // Target value (handle range vs single target)
                 val targetValueMgdl = preset?.targetValue ?: activeTT?.lowTarget ?: 100.0
                 val targetText = profileUtil.fromMgdlToStringInUnits(targetValueMgdl)
                 Text(
                     text = targetText,
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = if (compactCard) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
                     color = contentColor,
                     fontWeight = FontWeight.Bold
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(if (compactCard) 2.dp else 4.dp))
 
                 // Duration (formatted as "Xh Ym" when >= 60 minutes). A target without an end has none to show.
                 val durationMs = preset?.duration ?: activeTT?.takeIf { it.hasEnd }?.duration
@@ -180,38 +182,42 @@ fun TempTargetCarouselCard(
                     val durationMinutes = (durationMs / 60000L).toInt()
                     Text(
                         text = formatMinutesAsDuration(durationMinutes),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = if (compactCard) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodyLarge,
                         color = contentColor
                     )
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                // On a watch the 86 dp card only fits three lines; the badge colour and the reason in
+                // the name already tell the user which target this is.
+                if (!compactCard) {
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                // TT Reason badge
-                val reasonResId = getTTReasonStringRes(reason)
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = badgeColor,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                ) {
-                    Text(
-                        text = stringResource(reasonResId),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = AapsTheme.generalColors.onBadge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                }
+                    // TT Reason badge
+                    val reasonResId = getTTReasonStringRes(reason)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = badgeColor,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(reasonResId),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = AapsTheme.generalColors.onBadge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        )
+                    }
 
-                // Active indicator
-                if (isActiveCard) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(CoreUiStrings.active).uppercase(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = AapsTheme.generalColors.activeInsulinText,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // Active indicator
+                    if (isActiveCard) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(CoreUiStrings.active).uppercase(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = AapsTheme.generalColors.activeInsulinText,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

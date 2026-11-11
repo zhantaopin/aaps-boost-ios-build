@@ -275,6 +275,9 @@ fun TempTargetManagementScreen(
                                     IconButton(onClick = {
                                         focusManager.clearFocus()
                                         viewModel.saveCurrentPreset()
+                                        // Leave once the preset is stored, so the check mark finishes
+                                        // the edit instead of only hiding itself.
+                                        if (!viewModel.hasUnsavedChanges()) onNavigateBack()
                                     }) {
                                         Icon(
                                             imageVector = Icons.Default.Save,

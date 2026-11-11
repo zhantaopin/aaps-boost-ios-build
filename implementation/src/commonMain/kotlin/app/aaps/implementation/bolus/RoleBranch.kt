@@ -63,6 +63,9 @@ class RoleBranch(
     suspend fun commit(
         label: String,
         clientCommand: ClientControlActionDispatcher.Command,
+        // A scene stays active when some of its actions fail, so its callers pass PartialFailure;
+        // doses and bundles keep the generic ExecutionFailed.
+        syncFailureReason: FailureReason = FailureReason.ExecutionFailed,
         masterConfirm: suspend ((MasterActionExecutor.Failure) -> Unit) -> MasterActionExecutor.ConfirmResult
     ): ActionProgress {
         if (config.AAPSCLIENT) {
@@ -76,7 +79,7 @@ class RoleBranch(
         return when {
             result is MasterActionExecutor.ConfirmResult.NoPending -> ActionProgress.Rejected(FailureReason.NoPendingBolus)
             result is MasterActionExecutor.ConfirmResult.Cancelled -> ActionProgress.Rejected(FailureReason.Cancelled, err)
-            err != null                                           -> ActionProgress.Rejected(FailureReason.ExecutionFailed, err)
+            err != null                                           -> ActionProgress.Rejected(syncFailureReason, err)
             else                                                  -> ActionProgress.Applied
         }
     }

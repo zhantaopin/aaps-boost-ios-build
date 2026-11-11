@@ -102,5 +102,8 @@
     <string name="objectives_exam_next">Next</string>
     <string name="objectives_exam_next_unanswered">Next unanswered</string>
     <string name="objectives_show_hint">Hint</string>
+    <string name="objectives_learn_all_button">Complete all objectives</string>
+    <string name="objectives_learn_all_title">Complete every objective?</string>
+    <string name="objectives_learn_all_message">Every objective is marked as completed immediately, and every safety gate it holds opens at once: closed loop, SMB, autosens and automation. This is the same as passing all objectives yourself, without the waiting. Only do this if you already know how AAPS works.</string>
 
 </resources>

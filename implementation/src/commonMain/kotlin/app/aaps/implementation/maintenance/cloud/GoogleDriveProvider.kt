@@ -56,6 +56,7 @@ class GoogleDriveProvider(
     override val icon: ImageVector,
     override val authorizedText: TextRef,
     override val reAuthRequiredText: TextRef,
+    override val descriptionText: TextRef = TextRef.Literal(""),
     private val notificationManager: NotificationManager,
     private val clientId: String,
     private val redirectPort: Int = REDIRECT_PORT
@@ -341,6 +342,7 @@ fun googleDriveProvider(
         icon = IcGoogleDrive,
         authorizedText = ImplementationStrings.google_drive_authorized,
         reAuthRequiredText = ImplementationStrings.google_drive_reauth_required,
+        descriptionText = ImplementationStrings.backup_to_google_drive,
         notificationManager = notificationManager,
         clientId = GoogleDriveProvider.CLIENT_ID
     )

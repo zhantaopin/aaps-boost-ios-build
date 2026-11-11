@@ -169,6 +169,8 @@
     <string name="description_boost_v5">Doses for meals without meal announcements. It watches for a meal, confirms it, doses for it and then winds down. Outside a meal it doses with the Boost tiers.</string>
     <string name="boost_v1_smb_sizing_title">Boost base-engine SMB sizing</string>
     <string name="boost_stepcount_settings_title">Step Count Settings</string>
+    <string name="boost_sensor_advanced_title">Sensors (advanced)</string>
+    <string name="boost_sensor_advanced_summary">Step and heart-rate sources, plus the sensor self-check. Both sources are off by default.</string>
     <string name="boost_stepcount_settings_summary">Configure step-based activity and inactivity detection</string>
     <string name="boost_dynisf_title">Dynamic ISF (TDD-based)</string>
     <string name="boost_settings_default_aaps">Default AAPS Settings</string>
@@ -187,4 +189,33 @@
     <string name="boost_permission_body_sensors_title">Heart rate</string>
     <string name="boost_permission_body_sensors_description">Boost samples this device\'s heart-rate sensor to improve sleep detection and, when enabled, exercise classification.</string>
     <string name="boost_history_insulin_assumed">Nightscout history will download shortly. Records that name no insulin take the insulin in use, or your only listed insulin, and are not changed later. Check that insulin is right before relying on past IOB.</string>
+
+    <string name="boost_sensor_check_title">Sensor self-check</string>
+    <string name="boost_sensor_check_summary">Check this device\'s step and heart-rate sensors, permissions and latest data (read-only)</string>
+    <string name="boost_sensor_check_steps_enabled">Phone step counting</string>
+    <string name="boost_sensor_check_step_sensor">Step sensor</string>
+    <string name="boost_sensor_check_step_kind_counter">Counter</string>
+    <string name="boost_sensor_check_step_kind_detector">Detector (per step)</string>
+    <string name="boost_sensor_check_other_step_sensors">Other step sensors</string>
+    <string name="boost_sensor_check_step_registered">Listener registered</string>
+    <string name="boost_sensor_check_step_feed">Step feed</string>
+    <string name="boost_sensor_check_step_last_event">Last step event</string>
+    <string name="boost_sensor_check_steps_15m">Steps in last 15 min</string>
+    <string name="boost_sensor_check_hr_sensor">Heart-rate sensor</string>
+    <string name="boost_sensor_check_body_sensors">Body sensors permission</string>
+    <string name="boost_sensor_check_watch_hr">Watch heart-rate source</string>
+    <string name="boost_sensor_check_last_hr">Latest heart rate</string>
+    <string name="boost_sensor_check_refresh">Refresh</string>
+    <string name="boost_sensor_check_sample_hr">Sample heart rate for 10 s</string>
+    <string name="boost_sensor_check_back">Back</string>
+    <string name="boost_sensor_check_yes">Yes</string>
+    <string name="boost_sensor_check_no">No</string>
+    <string name="boost_sensor_check_none">None</string>
+    <string name="boost_sensor_check_never">Never</string>
+    <string name="boost_sensor_check_feed_live">OK</string>
+    <string name="boost_sensor_check_feed_none">Never reported</string>
+    <string name="boost_sensor_check_minutes_ago">%1$d min ago</string>
+    <string name="boost_sensor_check_watch_hr_on">On · %1$d min</string>
+    <string name="boost_sensor_check_hr_value">%1$d bpm · %2$s</string>
+    <string name="boost_sensor_check_sampling">Sampling…</string>
 </resources>

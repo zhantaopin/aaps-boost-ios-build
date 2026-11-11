@@ -277,12 +277,15 @@ class ProtectionCheckImpl(
             onResult(ProtectionResult.GRANTED)
             return
         }
-        val type = protectionTypeFor(typeKey)
-        if (type == ProtectionType.NONE) {
+        // A custom password or PIN that was never entered is no protection, exactly as isLevelConfigured()
+        // already says. Checking only the type here still prompted for the empty custom password, and no
+        // input could ever match it, so the app could not be unlocked (#5462).
+        if (!isProtectionConfigured(protection)) {
             onGranted(protection)
             onResult(ProtectionResult.GRANTED)
             return
         }
+        val type = protectionTypeFor(typeKey)
 
         // Cancel any pending request before emitting a new one
         _pendingRequest.value?.let { pending ->

@@ -10,7 +10,8 @@ data class ObjectivesUiState(
     val ntpVerification: NtpVerificationState? = null,
     val examSheet: ExamSheetState? = null,
     val learnedSheet: LearnedSheetState? = null,
-    val confirmUnstartDialog: Int? = null
+    val confirmUnstartDialog: Int? = null,
+    val pendingLearnAll: Boolean = false
 )
 
 @Immutable

@@ -9,6 +9,7 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.window.DialogProperties
 import app.aaps.core.ui.CoreUiStrings
+import app.aaps.core.ui.compose.longestScreenSideDp
 import app.aaps.core.ui.compose.stringResource
 
 /**
@@ -31,6 +32,16 @@ fun TimePickerModal(
     initialMinute: Int = 0,
     is24Hour: Boolean = true
 ) {
+    if (longestScreenSideDp() < COMPACT_PICKER_MAX_SIDE_DP) {
+        CompactTimePickerDialog(
+            onTimeSelected = onTimeSelected,
+            onDismiss = onDismiss,
+            initialHour = initialHour,
+            initialMinute = initialMinute
+        )
+        return
+    }
+
     val timePickerState = rememberTimePickerState(
         initialHour = initialHour,
         initialMinute = initialMinute,

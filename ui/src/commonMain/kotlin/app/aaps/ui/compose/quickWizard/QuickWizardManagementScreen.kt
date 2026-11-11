@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,6 +55,7 @@ import app.aaps.core.ui.compose.AapsFloatingToolbarRow
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.AapsTopAppBar
+import app.aaps.core.ui.compose.LocalImeSubmit
 import app.aaps.core.keys.interfaces.ClientRole
 import app.aaps.core.ui.compose.LocalClientRole
 import app.aaps.core.ui.compose.MasterOfflineBanner
@@ -258,6 +260,9 @@ fun QuickWizardManagementScreen(
                                     IconButton(onClick = {
                                         focusManager.clearFocus()
                                         viewModel.saveCurrentEntry()
+                                        // Leave the screen once the entry is actually stored, so the
+                                        // check mark finishes the edit instead of only hiding itself.
+                                        if (!viewModel.hasUnsavedChanges()) onNavigateBack()
                                     }) {
                                         Icon(
                                             imageVector = Icons.Default.Save,
@@ -406,7 +411,11 @@ fun QuickWizardManagementScreen(
                                 // Editor hidden while sorting: Save has given up its toolbar slot to
                                 // Done, so an edit made there would have nowhere to go.
                                 if (!isPlayMode && !isReorderMode && uiState.selectedIndex >= 0 && uiState.selectedIndex < uiState.entries.size) {
-                                    QuickWizardEditor(
+                                    // The keyboard's Done key saves, so one tap ends the edit.
+                                    CompositionLocalProvider(
+                                        LocalImeSubmit provides { scope.launch { viewModel.saveCurrentEntry() } }
+                                    ) {
+                                        QuickWizardEditor(
                                         mode = uiState.editorMode,
                                         buttonText = uiState.editorButtonText,
                                         insulin = uiState.editorInsulin,
@@ -458,6 +467,7 @@ fun QuickWizardManagementScreen(
                                         onCarbs2Change = viewModel::updateCarbs2,
                                         modifier = Modifier.fillMaxWidth()
                                     )
+                                    }
                                 }
                                 // Extra space for floating toolbar
                                 Spacer(modifier = Modifier.height(AapsSpacing.fabClearance))

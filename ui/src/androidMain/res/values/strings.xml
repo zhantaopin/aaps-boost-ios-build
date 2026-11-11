@@ -178,6 +178,7 @@
     <string name="clientcontrol_pending_partial_title">Partly applied</string>
     <!-- %1$s = action label -->
     <string name="clientcontrol_pending_partial_format">%1$s was applied, but some actions couldn\'t be.\nCheck the active state.</string>
+    <string name="clientcontrol_pending_partial_detail_format">%1$s was applied, but these actions failed:\n%2$s</string>
     <string name="clientcontrol_pending_unconfirmed_title">Couldn\'t confirm</string>
     <!-- %1$s = action label, %2$s = reason. Sent but unconfirmed → will reconcile via sync-back -->
     <string name="clientcontrol_pending_unconfirmed_format">%1$s was sent, but no confirmation came back.\n%2$s\nIt will appear here if/when the master applies it.</string>

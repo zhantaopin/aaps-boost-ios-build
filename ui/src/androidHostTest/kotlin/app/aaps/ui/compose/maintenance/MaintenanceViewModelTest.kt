@@ -1,14 +1,22 @@
 package app.aaps.ui.compose.maintenance
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cloud
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.L
+import app.aaps.core.interfaces.logging.LogLevel
+import app.aaps.core.interfaces.logging.LoggerUtils
 import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.maintenance.CloudAuthKind
+import app.aaps.core.interfaces.maintenance.CloudDirectoryInfo
 import app.aaps.core.interfaces.maintenance.CloudDirectoryManager
+import app.aaps.core.interfaces.maintenance.CloudProviderInfo
 import app.aaps.core.interfaces.maintenance.FileListProvider
 import app.aaps.core.interfaces.maintenance.ImportExportPrefs
 import app.aaps.core.interfaces.maintenance.Maintenance
+import app.aaps.core.interfaces.maintenance.WebDavSettings
 import app.aaps.core.interfaces.overview.OverviewData
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.plugin.ActivePlugin
@@ -64,6 +72,7 @@ internal class MaintenanceViewModelTest {
     @Mock private lateinit var overviewDataCache: OverviewDataCache
     @Mock private lateinit var nsClient: NsClient
     @Mock private lateinit var dateUtil: DateUtil
+    @Mock private lateinit var loggerUtils: LoggerUtils
 
     private lateinit var sut: MaintenanceViewModel
     private lateinit var testDispatcher: TestDispatcher
@@ -76,10 +85,11 @@ internal class MaintenanceViewModelTest {
         // against the default state.
         testDispatcher = StandardTestDispatcher()
         Dispatchers.setMain(testDispatcher)
+        whenever(loggerUtils.logLevel()).thenReturn(LogLevel.INFO)
         sut = MaintenanceViewModel(
             aapsLogger, generatedTextResolver(), l, maintenance, importExportPrefs, fileListProvider, cloudDirectoryManager,
             activePlugin, persistenceLayer, fabricPrivacy, uel, dataSyncSelectorXdrip, pumpSync,
-            iobCobCalculator, overviewData, overviewDataCache, nsClient, dateUtil
+            iobCobCalculator, overviewData, overviewDataCache, nsClient, dateUtil, loggerUtils
         )
     }
 
@@ -114,6 +124,93 @@ internal class MaintenanceViewModelTest {
         sut.onExportConfirmed()
 
         assertThat(sut.exportState.value).isEqualTo(MaintenanceViewModel.ExportState.AskPassword())
+    }
+
+    @Test
+    fun `webdav without credentials opens setup instead of starting an oauth flow`() {
+        whenever(cloudDirectoryManager.getWebDavSettings())
+            .thenReturn(WebDavSettings(baseUrl = "https://dav.example.com/user", username = "alice", hasPassword = true))
+
+        sut.onProviderClick(webDavProvider(hasCredentials = false, isActive = false))
+
+        runBlocking { verify(cloudDirectoryManager, never()).startAuth(any()) }
+        assertThat(sut.cloudDirectoryState.value).isEqualTo(
+            MaintenanceViewModel.CloudDirectoryState.WebDavSetup(
+                baseUrl = "https://dav.example.com/user",
+                username = "alice",
+                hasStoredPassword = true
+            )
+        )
+    }
+
+    @Test
+    fun `active webdav opens setup for editing instead of reconnecting`() {
+        whenever(cloudDirectoryManager.getWebDavSettings())
+            .thenReturn(WebDavSettings(baseUrl = "https://dav.example.com/user", username = "alice", hasPassword = true))
+
+        sut.onProviderClick(webDavProvider(hasCredentials = true, isActive = true))
+
+        runBlocking { verify(cloudDirectoryManager, never()).activateWebDav() }
+        assertThat(sut.cloudDirectoryState.value)
+            .isInstanceOf(MaintenanceViewModel.CloudDirectoryState.WebDavSetup::class.java)
+    }
+
+    @Test
+    fun `webdav rejects a non https server address before touching the network`() {
+        whenever(cloudDirectoryManager.getWebDavSettings())
+            .thenReturn(WebDavSettings(baseUrl = "", username = "", hasPassword = false))
+        sut.showWebDavSetup()
+
+        sut.connectWebDav("http://dav.example.com/user", "alice", "secret")
+
+        assertThat((sut.cloudDirectoryState.value as MaintenanceViewModel.CloudDirectoryState.WebDavSetup).error)
+            .isEqualTo("Enter a valid HTTPS server address without a user name or query.")
+        runBlocking { verify(cloudDirectoryManager, never()).configureWebDav(any()) }
+    }
+
+    @Test
+    fun `webdav asks for a password when none is stored`() {
+        whenever(cloudDirectoryManager.getWebDavSettings())
+            .thenReturn(WebDavSettings(baseUrl = "", username = "", hasPassword = false))
+        sut.showWebDavSetup()
+
+        sut.connectWebDav("https://dav.example.com/user", "alice", "")
+
+        assertThat((sut.cloudDirectoryState.value as MaintenanceViewModel.CloudDirectoryState.WebDavSetup).error)
+            .isEqualTo("Enter the password for this server.")
+    }
+
+    @Test
+    fun `webdav asks for the password again after the server or user changes`() {
+        whenever(cloudDirectoryManager.getWebDavSettings())
+            .thenReturn(WebDavSettings(baseUrl = "https://old.example.com/user", username = "alice", hasPassword = true))
+        sut.showWebDavSetup()
+
+        sut.connectWebDav("https://new.example.com/user", "alice", "")
+
+        assertThat((sut.cloudDirectoryState.value as MaintenanceViewModel.CloudDirectoryState.WebDavSetup).error)
+            .isEqualTo("Enter the password again after changing the server or user name.")
+    }
+
+    @Test
+    fun `requesting a clear while a cloud is active asks for confirmation`() {
+        whenever(cloudDirectoryManager.getCloudDirectoryInfo()).thenReturn(
+            CloudDirectoryInfo(
+                isCloudActive = true,
+                hasCredentials = true,
+                hasConnectionError = false,
+                providerDisplayName = "WebDAV",
+                providerDescription = "Backup",
+                providerIcon = Icons.Default.Cloud,
+                authorizedStatusText = "Connected",
+                cloudPath = "/AAPS/export"
+            )
+        )
+
+        sut.requestClearCloud()
+
+        assertThat(sut.cloudDirectoryState.value).isEqualTo(MaintenanceViewModel.CloudDirectoryState.ConfirmClear)
+        runBlocking { verify(cloudDirectoryManager, never()).deauthorizeAndClearCloudSettings() }
     }
 
     @Test
@@ -203,6 +300,19 @@ internal class MaintenanceViewModelTest {
 
         assertThat(event.await()).isEqualTo(MaintenanceEvent.CleanupResult("GlucoseValue 12"))
     }
+
+    private fun webDavProvider(hasCredentials: Boolean, isActive: Boolean) =
+        CloudProviderInfo(
+            storageType = "webdav",
+            displayName = "WebDAV",
+            description = "Backup to your WebDAV server",
+            icon = Icons.Default.Cloud,
+            isActive = isActive,
+            hasCredentials = hasCredentials,
+            hasConnectionError = false,
+            authorizedStatusText = "",
+            authKind = CloudAuthKind.USERNAME_PASSWORD
+        )
 
     /**
      * Lets the view model's coroutines run as they are started.

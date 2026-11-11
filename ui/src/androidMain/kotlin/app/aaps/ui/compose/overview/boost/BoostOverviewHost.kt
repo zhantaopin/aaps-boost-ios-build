@@ -1,14 +1,31 @@
 package app.aaps.ui.compose.overview.boost
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -16,13 +33,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.aaps.core.data.model.ActiveSceneState
+import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.notifications.AapsNotification
 import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.PluginBase
+import app.aaps.core.objects.extensions.tickerFlow
 import app.aaps.core.ui.CoreUiStrings
+import app.aaps.core.ui.compose.LocalClientRole
+import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.core.ui.compose.dialogs.OkCancelDialog
 import app.aaps.core.ui.compose.dialogs.ThreeButtonDialog
 import app.aaps.core.ui.compose.navigation.NavigationRequest
@@ -37,12 +61,9 @@ import app.aaps.ui.compose.manageSheet.ManageViewModel
 import app.aaps.ui.compose.notificationsSheet.NotificationBottomSheet
 import app.aaps.ui.compose.notificationsSheet.NotificationFab
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
+import app.aaps.ui.compose.scenes.SceneIcons
 import app.aaps.ui.compose.scenesSheet.ScenesViewModel
 import app.aaps.ui.compose.treatmentsSheet.TreatmentViewModel
-import app.aaps.ui.search.M3SearchBar
-import app.aaps.ui.search.SearchIndexEntry
-import app.aaps.ui.search.SearchResults
-import app.aaps.ui.search.SearchViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -65,13 +86,11 @@ fun BoostOverviewHost(
     loopActionViewModel: LoopActionViewModel,
     scenesViewModel: ScenesViewModel,
     manageViewModel: ManageViewModel,
-    searchViewModel: SearchViewModel,
     panelPlugins: List<PluginBase>,
     notificationManager: NotificationManager,
     pumpCommunicationStatus: PumpCommunicationStatus,
     onNavigate: (NavigationRequest) -> Unit,
     onBoostDetails: () -> Unit,
-    onSearchResultClick: (SearchIndexEntry) -> Unit,
     onActionsError: (String, String) -> Unit,
     onNotificationActionClick: (AapsNotification) -> Unit
 ) {
@@ -81,7 +100,6 @@ fun BoostOverviewHost(
     val pumpStatusBanner by pumpCommunicationStatus.statusBannerFlow.collectAsStateWithLifecycle()
     val notifications by notificationManager.notifications.collectAsStateWithLifecycle()
     val mainState by mainViewModel.uiState.collectAsStateWithLifecycle()
-    val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -114,6 +132,14 @@ fun BoostOverviewHost(
                 .map { BoostUserActionButton(eventId = it.eventId, title = it.title, icon = it.firstActionIcon?.icon) }
         )
     }
+    // The panel's scene tab doubles as the "a scene is running" light.
+    val activeScene by mainViewModel.activeSceneState.collectAsStateWithLifecycle()
+    val sceneExpired by mainViewModel.sceneExpired.collectAsStateWithLifecycle()
+    val sceneChainTargetName by mainViewModel.activeSceneChainTargetName.collectAsStateWithLifecycle()
+    val masterReachable by mainViewModel.masterReachable.collectAsStateWithLifecycle()
+    var showSceneSheet by rememberSaveable { mutableStateOf(false) }
+    // A scene that ends while its sheet is open leaves no state behind: close the sheet with it.
+    LaunchedEffect(activeScene) { if (activeScene == null) showSceneSheet = false }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -139,44 +165,19 @@ fun BoostOverviewHost(
                 graphViewModel = graphViewModel,
                 pumpStatus = pumpStatusBanner?.text ?: "",
                 actions = actions,
+                activeScene = activeScene != null,
+                onSceneClick = { showSceneSheet = true },
                 modifier = Modifier.systemBarsPadding(),
                 panelTabs = {
                     BoostPanelTabs(
                         plugins = panelPlugins,
                         isTreatmentsEnabled = mainState.isProfileLoaded,
+                        activeScene = activeScene != null,
                         actionsLabel = stringResource(CoreUiStrings.manage),
                         onActions = { manageSheetState.show() },
                         onElement = { element -> onNavigate(NavigationRequest.Element(element)) },
                         onPlugin = { plugin -> onNavigate(NavigationRequest.Plugin(plugin::class.simpleName.orEmpty())) }
                     )
-                },
-                searchActive = searchState.isSearchActive,
-                searchBar = { searchModifier ->
-                    M3SearchBar(
-                        query = searchState.query,
-                        isActive = searchState.isSearchActive,
-                        onQueryChange = { searchViewModel.onQueryChanged(it) },
-                        onClearClick = { searchViewModel.clearQuery() },
-                        onActiveChange = { active ->
-                            if (active) searchViewModel.onSearchModeActivated()
-                            else searchViewModel.onSearchModeDeactivated()
-                        },
-                        modifier = searchModifier
-                    )
-                },
-                searchResults = {
-                    if (searchState.isSearchActive) {
-                        SearchResults(
-                            results = searchState.results,
-                            wikiResults = searchState.wikiResults,
-                            isSearching = searchState.isSearching,
-                            isSearchingWiki = searchState.isSearchingWiki,
-                            wikiOffline = searchState.wikiOffline,
-                            revision = searchState.revision,
-                            onResultClick = onSearchResultClick,
-                            onPluginToggle = { plugin -> searchViewModel.togglePlugin(plugin) }
-                        )
-                    }
                 },
                 onMenu = { scope.launch { drawerState.open() } },
                 onBoostDetails = onBoostDetails,
@@ -198,24 +199,6 @@ fun BoostOverviewHost(
         }
     }
 
-    // Plugin enable/disable confirmations raised from search results, as on the main overview.
-    searchState.pluginSwitchConfirmation?.let { confirmation ->
-        OkCancelDialog(
-            title = stringResource(CoreUiStrings.configbuilder_switch_confirmation_title),
-            message = stringResource(CoreUiStrings.configbuilder_switch_confirmation, confirmation.fromName, confirmation.toName),
-            onConfirm = { searchViewModel.confirmPluginSwitch() },
-            onDismiss = { searchViewModel.dismissPluginSwitch() }
-        )
-    }
-    searchState.hardwarePumpConfirmation?.let { confirmation ->
-        OkCancelDialog(
-            title = stringResource(CoreUiStrings.confirmation),
-            message = confirmation.message,
-            onConfirm = { searchViewModel.confirmHardwarePump() },
-            onDismiss = { searchViewModel.dismissHardwarePump() }
-        )
-    }
-
     if (showNotificationSheet && notifications.isNotEmpty()) {
         NotificationBottomSheet(
             notifications = notifications,
@@ -230,6 +213,27 @@ fun BoostOverviewHost(
             state = loopState,
             onPerform = { mainViewModel.performLoopAccept() },
             onDismiss = { showLoopActionSheet = false }
+        )
+    }
+
+    // Tapping the scene light in the top bar opens the running scene: what it is, how long is left, how to stop it.
+    val runningScene = activeScene
+    if (showSceneSheet && runningScene != null) {
+        BoostSceneSheet(
+            state = runningScene,
+            expired = sceneExpired,
+            chainTargetName = sceneChainTargetName,
+            endEnabled = masterReachable,
+            formatDuration = mainViewModel::formatDuration,
+            onEnd = {
+                showSceneSheet = false
+                mainViewModel.requestSceneDeactivation()
+            },
+            onDismissExpired = {
+                showSceneSheet = false
+                mainViewModel.dismissExpiredScene()
+            },
+            onClose = { showSceneSheet = false }
         )
     }
 
@@ -258,6 +262,115 @@ fun BoostOverviewHost(
                 onConfirm = { mainViewModel.executeConfirmableAction(confirmation.onConfirmAction) },
                 onDismiss = { mainViewModel.dismissActionConfirmation() }
             )
+        }
+    }
+}
+
+/**
+ * What the top bar's scene light opens: the running scene's name, time left, progress and End.
+ *
+ * Boost keeps its own dark palette here — the default overview's banner is a Material card and would
+ * read as a light box on this screen.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BoostSceneSheet(
+    state: ActiveSceneState,
+    expired: Boolean,
+    chainTargetName: String?,
+    endEnabled: Boolean,
+    formatDuration: (Long) -> String,
+    onEnd: () -> Unit,
+    onDismissExpired: () -> Unit,
+    onClose: () -> Unit
+) {
+    val dateUtil = LocalDateUtil.current
+    // Ticker for the countdown — 30s matches the default overview's banner; the text is minute-grain.
+    var now by remember { mutableLongStateOf(dateUtil.now()) }
+    LaunchedEffect(Unit) { tickerFlow(30_000L).collect { now = dateUtil.now() } }
+
+    val remainingMs = state.remainingMs(now)
+    val totalMs = state.durationMs
+    val status = when {
+        expired                                              -> stringResource(CoreUiStrings.scene_ended)
+        remainingMs != null && remainingMs > 0 && totalMs > 0 -> formatDuration(remainingMs)
+        else                                                 -> stringResource(CoreUiStrings.scene_active)
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = BoostV2Colors.cardBackground
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = SceneIcons.fromKey(state.scene.icon).icon,
+                    contentDescription = null,
+                    tint = BoostV2Colors.accent
+                )
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(
+                        text = state.scene.name,
+                        color = BoostV2Colors.textPrimary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = status,
+                        color = if (expired) BoostV2Colors.textSecondary else BoostV2Colors.accent,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+            if (!expired && remainingMs != null && totalMs > 0) {
+                Spacer(Modifier.height(12.dp))
+                LinearProgressIndicator(
+                    progress = { 1f - remainingMs.toFloat() / totalMs.toFloat() },
+                    color = BoostV2Colors.accent,
+                    trackColor = BoostV2Colors.stroke,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                )
+            }
+            if (!expired && chainTargetName != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(CoreUiStrings.scene_chain_indicator, chainTargetName),
+                    color = BoostV2Colors.textSecondary,
+                    fontSize = 12.sp
+                )
+            }
+            state.chainSkipReason?.takeIf { expired }?.let { reason ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(CoreUiStrings.scene_chain_skipped_line, reason),
+                    color = BoostV2Colors.amber,
+                    fontSize = 12.sp
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (expired) {
+                    FilledTonalButton(onClick = onDismissExpired) {
+                        Text(stringResource(CoreUiStrings.close))
+                    }
+                } else if (LocalClientRole.current.allows(ElementType.SCENE.role)) {
+                    FilledTonalButton(onClick = onEnd, enabled = endEnabled) {
+                        Text(stringResource(CoreUiStrings.scene_deactivate))
+                    }
+                }
+                TextButton(onClick = onClose) {
+                    Text(stringResource(CoreUiStrings.close))
+                }
+            }
         }
     }
 }

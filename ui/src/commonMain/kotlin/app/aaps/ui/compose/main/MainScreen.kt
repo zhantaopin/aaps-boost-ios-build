@@ -4,10 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,10 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -56,7 +50,6 @@ import app.aaps.core.ui.compose.dialogs.ThreeButtonDialog
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.core.ui.compose.stringResource
-import app.aaps.ui.UiStrings
 import app.aaps.ui.compose.aboutDialog.AboutAlertDialog
 import app.aaps.ui.compose.aboutDialog.AboutDialogData
 import app.aaps.ui.compose.maintenance.ImportSource
@@ -79,7 +72,6 @@ import app.aaps.ui.compose.treatmentsSheet.TreatmentViewModel
 import app.aaps.ui.search.SearchIndexEntry
 import app.aaps.ui.search.SearchResults
 import app.aaps.ui.search.SearchUiState
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -202,45 +194,26 @@ fun MainScreen(
         gesturesEnabled = true,
         modifier = modifier
     ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
             val density = LocalDensity.current
-            val previewMode = maxHeight < PREVIEW_MODE_MIN_HEIGHT
-            var chromeVisible by remember { mutableStateOf(false) }
-            val showChrome = !previewMode || chromeVisible
-            val interactionSource = remember { MutableInteractionSource() }
-            val accessibilityManager = LocalAccessibilityManager.current
+            // The top bar and the bottom navigation stay visible at every height: hiding them made a tap
+            // anywhere on a small screen pop them up, which read as an accidental overlay.
+            val showChrome = true
 
             // Measure actual bar heights for content padding in non-preview mode
             var topBarHeightPx by remember { mutableIntStateOf(0) }
             var bottomBarHeightPx by remember { mutableIntStateOf(0) }
 
-            // Auto-hide chrome after timeout, reset when leaving preview mode
-            LaunchedEffect(chromeVisible, previewMode) {
-                if (!previewMode) {
-                    chromeVisible = false
-                    return@LaunchedEffect
-                }
-                if (chromeVisible) {
-                    // Honours the system "Time to take action" setting: a screen reader user moving
-                    // through the bars needs longer than 3 s before they hide again.
-                    delay(accessibilityManager?.calculateRecommendedTimeoutMillis(AUTO_HIDE_DELAY_MS, containsIcons = true, containsControls = true) ?: AUTO_HIDE_DELAY_MS)
-                    chromeVisible = false
-                }
-            }
-
             // topBar/bottomBar are intentionally absent — chrome is rendered as
-            // overlays inside the content (see AnimatedVisibility blocks below) so
-            // it can hide in preview mode without reflowing layout. The status-bar
-            // and navigation-bar protection scrims rely on this: they read raw
-            // WindowInsets.statusBars / navigationBars, which would be consumed
-            // (returning zero height) if those Scaffold slots were populated.
+            // overlays inside the content (see AnimatedVisibility blocks below).
+            // The status-bar and navigation-bar protection scrims rely on this:
+            // they read raw WindowInsets.statusBars / navigationBars, which would be
+            // consumed (returning zero height) if those Scaffold slots were populated.
             Scaffold { scaffoldPadding ->
                 val hasToolbar = quickLaunchItems.isNotEmpty()
 
-                // Content padding: in preview mode use only system bars;
-                // in normal mode add measured bar heights
-                val contentPadding = if (previewMode) scaffoldPadding
-                else {
+                // Content padding: always add the measured bar heights, the bars are always shown.
+                val contentPadding = run {
                     val topBarHeight = with(density) { topBarHeightPx.toDp() }
                     val bottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
                     PaddingValues(
@@ -311,10 +284,8 @@ fun MainScreen(
                         },
                         paddingValues = contentPadding,
                         fabBottomOffset = if (hasToolbar && showChrome) 56.dp else 0.dp,
-                        // In preview mode the bottom bar lies over the content instead of above it, so the end of each
-                        // column needs its height too. The height is kept once measured, so the columns do not move each
-                        // time the bars show and hide.
-                        overlaidBarsHeight = if (previewMode) with(density) { bottomBarHeightPx.toDp() } else 0.dp,
+                        // The bottom bar sits above the content now, so no extra bottom room is needed.
+                        overlaidBarsHeight = 0.dp,
                         bolusState = bolusState,
                         pumpStatusText = pumpStatusText,
                         queueStatusText = queueStatusText,
@@ -401,7 +372,6 @@ fun MainScreen(
                             .padding(top = scaffoldPadding.calculateTopPadding())
                     ) {
                         MainTopBar(
-                            searchUiState = searchUiState,
                             onMenuClick = {
                                 scope.launch {
                                     drawerState.open()
@@ -409,9 +379,6 @@ fun MainScreen(
                                 }
                             },
                             onPreferencesClick = { onNavigate(NavigationRequest.Element(ElementType.SETTINGS)) },
-                            onSearchQueryChange = onSearchQueryChange,
-                            onSearchClear = onSearchClear,
-                            onSearchActiveChange = onSearchActiveChange,
                             isSimpleMode = uiState.isSimpleMode,
                             // Guard against transient 0 heights during AnimatedVisibility exit:
                             // the resulting contentPadding invalidation can schedule a remeasure
@@ -484,22 +451,6 @@ fun MainScreen(
                         QuickLaunchToolbar(
                             items = quickLaunchItems,
                             onActionClick = onQuickLaunchActionClick,
-                        )
-                    }
-
-                    // Tap overlay to restore chrome in preview mode (only when hidden)
-                    if (previewMode && !chromeVisible) {
-                        // Named: the top bar, menu and toolbar come back only through this, and a
-                        // screen reader announced it as a nameless control.
-                        val showControls = stringResource(UiStrings.a11y_show_controls)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clickable(
-                                    interactionSource = interactionSource,
-                                    indication = null
-                                ) { chromeVisible = true }
-                                .semantics { contentDescription = showControls }
                         )
                     }
                 }
@@ -599,9 +550,6 @@ fun MainScreen(
         )
     }
 }
-
-private val PREVIEW_MODE_MIN_HEIGHT: Dp = 500.dp
-private const val AUTO_HIDE_DELAY_MS = 3000L
 
 /**
  * How far the version label is lifted above the content's top edge while the top bar is shown. The

@@ -1,6 +1,7 @@
 package app.aaps.ui.compose.profileManagement
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -100,7 +101,8 @@ fun TimeValueList(
                 valueRange = valueRange,
                 step = step,
                 valueFormat = valueFormat,
-                header = header
+                header = header,
+                keypadTitle = title
             )
         }
     }
@@ -168,66 +170,114 @@ private fun TimeValueRow(
     valueRange: ClosedFloatingPointRange<Double>,
     step: Double,
     valueFormat: NumberFormat,
-    header: String
+    header: String,
+    keypadTitle: String
 ) {
     val dateUtil = LocalDateUtil.current
     val timeString = dateUtil.timeStringFromSeconds(timeSeconds)
+    val entryLabel = stringResource(UiStrings.a11y_profile_entry, header, timeString)
 
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TimeChip(index = index, timeString = timeString, onClick = onTimeClick, timePicker = timePicker)
-
-            Spacer(Modifier.width(8.dp))
-
-            // Editable value with +/- stepper buttons
-            PlusMinusEdit(
-                value = value,
-                onValueChange = onValueChange,
-                valueRange = valueRange,
-                step = step,
-                valueFormat = valueFormat,
-                // The time and the list are beside and above it on screen; a screen reader needs them
-                // said, or every one of up to 24 rows is just "0.85, edit box".
-                label = stringResource(UiStrings.a11y_profile_entry, header, timeString),
-                modifier = Modifier.weight(1f)
-            )
-
-            // Add button (only shown if there's room for a new entry after this one)
-            if (canAdd) {
-                IconButton(
-                    onClick = onAdd,
-                    modifier = Modifier.size(36.dp)
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        // On a 320 dp wide screen the chip (80 dp) plus the add/remove buttons (72 dp) leave the
+        // stepper only ~70 dp, which squeezes the text field down to a sliver and hides the number.
+        // Below this width the value gets its own full-width line, as in TargetValueRow.
+        val stackValue = maxWidth < 300.dp
+        Column {
+            if (stackValue) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(CoreUiStrings.add_time_block),
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TimeChip(index = index, timeString = timeString, onClick = onTimeClick, timePicker = timePicker)
+
+                        Spacer(Modifier.weight(1f))
+
+                        AddEntryButton(canAdd = canAdd, onAdd = onAdd)
+                        RemoveEntryButton(canRemove = canRemove, onRemove = onRemove)
+                    }
+
+                    PlusMinusEdit(
+                        value = value,
+                        onValueChange = onValueChange,
+                        valueRange = valueRange,
+                        step = step,
+                        valueFormat = valueFormat,
+                        label = entryLabel,
+                        keypadTitle = keypadTitle,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             } else {
-                Spacer(Modifier.size(36.dp))
-            }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TimeChip(index = index, timeString = timeString, onClick = onTimeClick, timePicker = timePicker)
 
-            // Remove button
-            IconButton(
-                onClick = onRemove,
-                enabled = canRemove,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(CoreUiStrings.remove_entry),
-                    modifier = Modifier.size(20.dp),
-                    tint = if (canRemove) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                )
+                    Spacer(Modifier.width(8.dp))
+
+                    // Editable value with +/- stepper buttons
+                    PlusMinusEdit(
+                        value = value,
+                        onValueChange = onValueChange,
+                        valueRange = valueRange,
+                        step = step,
+                        valueFormat = valueFormat,
+                        // The time and the list are beside and above it on screen; a screen reader needs them
+                        // said, or every one of up to 24 rows is just "0.85, edit box".
+                        label = entryLabel,
+                        keypadTitle = keypadTitle,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    AddEntryButton(canAdd = canAdd, onAdd = onAdd)
+                    RemoveEntryButton(canRemove = canRemove, onRemove = onRemove)
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun AddEntryButton(canAdd: Boolean, onAdd: () -> Unit) {
+    // Add button (only shown if there's room for a new entry after this one)
+    if (canAdd) {
+        IconButton(
+            onClick = onAdd,
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = stringResource(CoreUiStrings.add_time_block),
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    } else {
+        Spacer(Modifier.size(36.dp))
+    }
+}
+
+@Composable
+private fun RemoveEntryButton(canRemove: Boolean, onRemove: () -> Unit) {
+    IconButton(
+        onClick = onRemove,
+        enabled = canRemove,
+        modifier = Modifier.size(36.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = stringResource(CoreUiStrings.remove_entry),
+            modifier = Modifier.size(20.dp),
+            tint = if (canRemove) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+        )
     }
 }
 
@@ -399,6 +449,7 @@ private fun TargetValueRow(
                 step = step,
                 valueFormat = valueFormat,
                 label = lowSpoken,
+                keypadTitle = lowLabel,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -423,6 +474,7 @@ private fun TargetValueRow(
                 step = step,
                 valueFormat = valueFormat,
                 label = highSpoken,
+                keypadTitle = highLabel,
                 modifier = Modifier.weight(1f)
             )
         }

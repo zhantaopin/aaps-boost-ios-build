@@ -94,6 +94,11 @@
     <string name="error_accessing_filesystem_select_aaps_directory_properly">Error accessing filesystem. Select AAPS directory properly.</string>
     <string name="storage_google_drive">Google Drive</string>
     <string name="backup_to_google_drive">Backup to Google Drive</string>
+    <string name="storage_webdav">WebDAV</string>
+    <string name="backup_to_webdav">Backup to your WebDAV server</string>
+    <string name="webdav_authorized">WebDAV connected</string>
+    <string name="webdav_reauth_required">WebDAV connection failed. Check the server URL and password.</string>
+    <string name="webdav_connect_error">Unable to connect to WebDAV: %1$s</string>
     <string name="csv_upload_failed">Failed to upload User Entries CSV to cloud storage</string>
     <string name="csv_upload_error">Error occurred while uploading CSV to cloud</string>
     <string name="uploading_to_cloud">Uploading to cloud...</string>

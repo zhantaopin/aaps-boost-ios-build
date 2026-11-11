@@ -105,4 +105,7 @@
     <string name="objectives_exam_next">下一个</string>
     <string name="objectives_exam_next_unanswered">下一个未回答</string>
     <string name="objectives_show_hint">提示</string>
+    <string name="objectives_learn_all_button">一键完成全部目标</string>
+    <string name="objectives_learn_all_title">全部目标标记为已完成？</string>
+    <string name="objectives_learn_all_message">所有目标将立即标记为已完成，对应的安全限制同时解锁：闭环、SMB、自动敏感度与自动化。效果等同于你自己全部通过，只是跳过了等待时间。请确认你已经熟悉 AAPS 的使用方式。</string>
 </resources>

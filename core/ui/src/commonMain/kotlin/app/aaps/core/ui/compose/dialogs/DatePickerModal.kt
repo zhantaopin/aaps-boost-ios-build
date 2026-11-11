@@ -8,6 +8,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import app.aaps.core.ui.CoreUiStrings
+import app.aaps.core.ui.compose.longestScreenSideDp
 import app.aaps.core.ui.compose.stringResource
 
 /**
@@ -27,6 +28,15 @@ fun DatePickerModal(
     initialDateMillis: Long? = null
 ) {
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
+
+    if (longestScreenSideDp() < COMPACT_PICKER_MAX_SIDE_DP) {
+        CompactDatePickerDialog(
+            onDateSelected = onDateSelected,
+            onDismiss = onDismiss,
+            initialDateMillis = initialDateMillis
+        )
+        return
+    }
 
     DatePickerDialog(
         onDismissRequest = onDismiss,

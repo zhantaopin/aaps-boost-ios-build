@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -782,6 +783,16 @@ fun GraphsSection(
         if (canAddGraph && showAddSheet) {
             var newGraphSeries by remember { mutableStateOf(emptyList<SeriesType>()) }
             var newGraphHeight by remember { mutableIntStateOf(GraphConfig.DEFAULT_GRAPH_HEIGHT_DP) }
+            val applyAndClose = {
+                if (newGraphSeries.isNotEmpty()) {
+                    val graphs = graphConfig.secondaryGraphs.toMutableList()
+                    graphs.add(SecondaryGraph(newGraphSeries, newGraphHeight))
+                    graphViewModel.updateGraphConfig(graphConfig.copy(secondaryGraphs = graphs))
+                }
+                newGraphSeries = emptyList()
+                newGraphHeight = GraphConfig.DEFAULT_GRAPH_HEIGHT_DP
+                showAddSheet = false
+            }
             GraphSeriesBottomSheet(
                 title = stringResource(CoreUiStrings.graph_new),
                 selectedSeries = newGraphSeries,
@@ -798,16 +809,9 @@ fun GraphsSection(
                     }
                     newGraphSeries = current
                 },
-                onDismiss = {
-                    if (newGraphSeries.isNotEmpty()) {
-                        val graphs = graphConfig.secondaryGraphs.toMutableList()
-                        graphs.add(SecondaryGraph(newGraphSeries, newGraphHeight))
-                        graphViewModel.updateGraphConfig(graphConfig.copy(secondaryGraphs = graphs))
-                    }
-                    newGraphSeries = emptyList()
-                    newGraphHeight = GraphConfig.DEFAULT_GRAPH_HEIGHT_DP
-                    showAddSheet = false
-                }
+                onDismiss = applyAndClose,
+                onConfirm = applyAndClose,
+                confirmEnabled = newGraphSeries.isNotEmpty()
             )
         }
         // Spacer so the last graph / Add button isn't covered by QuickLaunch toolbar
@@ -948,6 +952,8 @@ private fun GraphSeriesBottomSheet(
     onHeightChange: (Int) -> Unit,
     onToggle: (SeriesType) -> Unit,
     onDismiss: () -> Unit,
+    onConfirm: () -> Unit = onDismiss,
+    confirmEnabled: Boolean = true,
     onRemoveGraph: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState()
@@ -967,7 +973,8 @@ private fun GraphSeriesBottomSheet(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
                 )
                 if (onRemoveGraph != null) {
                     TextButton(onClick = onRemoveGraph) {
@@ -975,6 +982,18 @@ private fun GraphSeriesBottomSheet(
                         Spacer(Modifier.width(4.dp))
                         Text(stringResource(CoreUiStrings.remove))
                     }
+                }
+                // Confirming used to be possible only by swiping the sheet down, which on a small
+                // screen is hard to discover and easy to miss.
+                IconButton(
+                    onClick = onConfirm,
+                    enabled = confirmEnabled
+                ) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = stringResource(CoreUiStrings.confirm),
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -984,7 +1003,10 @@ private fun GraphSeriesBottomSheet(
                 onValueChange = { onHeightChange(it.toInt()) },
                 valueRange = GraphConfig.DEFAULT_GRAPH_HEIGHT_DP.toDouble()..GraphConfig.MAX_GRAPH_HEIGHT_DP.toDouble(),
                 step = 10.0,
-                formatAsInt = true
+                formatAsInt = true,
+                // The keyboard's Done key confirms the sheet as well; otherwise it only hides the
+                // keyboard and the user is left on the sheet wondering why nothing happened.
+                onSubmit = { onConfirm() }
             )
             Spacer(Modifier.height(8.dp))
             FlowRow(

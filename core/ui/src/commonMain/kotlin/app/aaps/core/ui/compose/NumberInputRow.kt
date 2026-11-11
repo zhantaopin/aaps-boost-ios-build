@@ -1,5 +1,7 @@
 package app.aaps.core.ui.compose
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,10 +24,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
@@ -40,6 +44,13 @@ import app.aaps.core.interfaces.InterfacesStrings
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.ui.CoreUiStrings
 import kotlin.math.roundToInt
+
+/**
+ * Lets a screen make the keyboard's Done key perform its primary action (save and leave), so a
+ * single tap on the IME's check mark finishes an editor instead of only hiding the keyboard.
+ * Screens that edit in place and have nothing to confirm leave it null.
+ */
+val LocalImeSubmit = staticCompositionLocalOf<(() -> Unit)?> { null }
 
 /**
  * Composable that displays a numeric input as a TextField with +/- icon buttons.
@@ -65,6 +76,9 @@ import kotlin.math.roundToInt
  * @param decimalPlaces Number of decimal places for value display (0 = integer, default). Ignored if valueFormat is set.
  * @param enabled Whether the input is interactive
  * @param modifier Modifier for the root Column container
+ * @param onSubmit Invoked with the committed value when the user presses the keyboard's Done key.
+ *   Set this in single-value dialogs so Done confirms and closes the dialog instead of just
+ *   dropping focus. Null keeps the old behaviour (commit + clear focus).
  *
  * @see NumberInputRowBasicPreview
  * @see NumberInputRowWithUnitPreview
@@ -89,11 +103,15 @@ fun NumberInputRow(
     enabled: Boolean = true,
     compact: Boolean = false,
     displayValue: String? = null,
+    onSubmit: ((Double) -> Unit)? = null,
 ) {
     val effectiveValueFormat = valueFormat ?: remember(decimalPlaces) {
         NumberFormat.withDecimals(decimalPlaces)
     }
     val focusManager = LocalFocusManager.current
+    // Set by editors whose primary action is "save and leave"; null on screens that edit in place.
+    val imeSubmit = LocalImeSubmit.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val label = labelRef?.let { stringResource(it) } ?: ""
     // Track whether the field is focused for editing
     var isFocused by remember { mutableStateOf(false) }
@@ -102,6 +120,19 @@ fun NumberInputRow(
     }
     var isError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+
+    // Old Android watch IMEs neither send Done nor report their window, so there the field is
+    // read-only for the system IME and a tap opens the app's own keypad instead.
+    val useKeypad = legacyImePlatform
+    var showKeypad by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    if (useKeypad) {
+        LaunchedEffect(interactionSource) {
+            interactionSource.interactions.collect { interaction ->
+                if (interaction is PressInteraction.Release && enabled) showKeypad = true
+            }
+        }
+    }
 
     // Sync text field when value changes externally (e.g., +/- buttons, quick-add buttons,
     // ViewModel updates). Skip only when the field's current text already parses to `value` —
@@ -156,23 +187,24 @@ fun NumberInputRow(
     val errorInvalidNumber = stringResource(CoreUiStrings.invalid_number)
     val errorOutOfRange = stringResource(InterfacesStrings.confirmation_line, stringResource(CoreUiStrings.error), rangeText)
 
-    fun validateAndCommit(text: String) {
+    fun validateAndCommit(text: String): Double? {
         val cleaned = text.trim().replace(",", ".")
         val parsed = if (cleaned.isEmpty()) 0.0 else cleaned.toDoubleOrNull()
         if (parsed == null) {
             isError = true
             errorMessage = errorInvalidNumber
-        } else {
-            val coerced = parsed.coerceIn(valueRange)
-            isError = false
-            // Sync the field text when we coerce (e.g. user left an out-of-range value),
-            // so what's published and what's displayed agree.
-            val newText = if (coerced == 0.0) "" else effectiveValueFormat.format(coerced)
-            if (newText != textFieldValue.text) {
-                textFieldValue = TextFieldValue(newText)
-            }
-            onValueChange(coerced)
+            return null
         }
+        val coerced = parsed.coerceIn(valueRange)
+        isError = false
+        // Sync the field text when we coerce (e.g. user left an out-of-range value),
+        // so what's published and what's displayed agree.
+        val newText = if (coerced == 0.0) "" else effectiveValueFormat.format(coerced)
+        if (newText != textFieldValue.text) {
+            textFieldValue = TextFieldValue(newText)
+        }
+        onValueChange(coerced)
+        return coerced
     }
 
     // Flush pending text when leaving composition (e.g., user presses back without
@@ -242,6 +274,8 @@ fun NumberInputRow(
                 label = if (label.isNotEmpty()) ({ Text(label) }) else null,
                 singleLine = true,
                 enabled = enabled,
+                readOnly = useKeypad,
+                interactionSource = interactionSource,
                 isError = isError,
                 // Use trailingIcon (not suffix) so the unit remains visible even when the field is
                 // empty and unfocused — suffix is hidden by M3 while the label is in its large state.
@@ -255,8 +289,19 @@ fun NumberInputRow(
                 ),
                 keyboardActions = KeyboardActions(
                     onDone = {
-                        validateAndCommit(textFieldValue.text)
+                        val committed = validateAndCommit(textFieldValue.text)
+                        // Drop focus first: on older Android (8.x/9) hide() is ignored while the
+                        // field still owns the IME, and the keyboard would come straight back.
                         focusManager.clearFocus()
+                        keyboardController?.hide()
+                        // A single-value dialog passes onSubmit, so Done confirms it. Everywhere
+                        // else Done keeps just committing and dropping focus.
+                        when {
+                            committed == null -> Unit
+                            onSubmit != null -> onSubmit(committed)
+                            imeSubmit != null -> imeSubmit.invoke()
+                            else -> Unit
+                        }
                     }
                 ),
                 modifier = Modifier
@@ -273,6 +318,35 @@ fun NumberInputRow(
                         isFocused = focusState.isFocused
                     }
             )
+            // Older Android: the IME's own check mark only hides the keyboard and sends no Done
+            // action, so the field keeps focus and the keyboard bounces back. Treat that as Done.
+            LegacyImeCloseEffect(isFocused = isFocused) {
+                validateAndCommit(textFieldValue.text)
+                focusManager.clearFocus()
+                keyboardController?.hide()
+            }
+            // Old Android: the keypad's ✓ is the Done key the watch IME never sends. It runs the
+            // same path as onDone, so in single-value dialogs it confirms and returns as well.
+            if (showKeypad) {
+                NumericKeypadDialog(
+                    title = label.ifEmpty { null },
+                    initialText = textFieldValue.text,
+                    allowDecimal = step != step.roundToInt().toDouble(),
+                    allowNegative = valueRange.start < 0,
+                    onConfirm = { newText ->
+                        textFieldValue = TextFieldValue(newText)
+                        val committed = validateAndCommit(newText)
+                        showKeypad = false
+                        when {
+                            committed == null -> Unit
+                            onSubmit != null -> onSubmit(committed)
+                            imeSubmit != null -> imeSubmit.invoke()
+                            else -> Unit
+                        }
+                    },
+                    onDismiss = { showKeypad = false }
+                )
+            }
             // Range and formatted display — hidden in compact mode (e.g., when nested in a row).
             // Errors still surface so the user isn't stuck.
             if (!compact || isError) {
@@ -353,6 +427,7 @@ fun NumberInputRow(
     enabled: Boolean = true,
     compact: Boolean = false,
     displayValue: String? = null,
+    onSubmit: ((Double) -> Unit)? = null,
 ) = NumberInputRow(
     labelRef = if (labelResId != 0) TextRef.AndroidRes(labelResId) else null,
     value = value,
@@ -369,4 +444,5 @@ fun NumberInputRow(
     enabled = enabled,
     compact = compact,
     displayValue = displayValue,
+    onSubmit = onSubmit,
 )

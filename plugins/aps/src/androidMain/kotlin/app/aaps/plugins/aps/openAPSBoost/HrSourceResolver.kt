@@ -106,6 +106,16 @@ class HrFeedDarkTracker(
      */
     data class Event(val wentDarkNote: String?, val raiseNotification: Boolean, val darkMinutes: Long)
 
+    /**
+     * Forgets the current episode. Called while no heart-rate source is expected, so re-enabling the
+     * feature cannot inherit a stale "dark since hours ago" timestamp and notify at once.
+     */
+    fun reset() {
+        wasFresh = null
+        darkSinceMs = 0L
+        notified = false
+    }
+
     fun onCycle(res: HrSourceResolver.Resolution, nowMs: Long, localHour: Int): Event {
         if (res.anyFresh) {
             wasFresh = true

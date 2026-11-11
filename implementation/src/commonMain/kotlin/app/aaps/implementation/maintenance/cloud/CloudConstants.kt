@@ -32,6 +32,7 @@ object StorageTypes {
 
     const val LOCAL = "local"
     const val GOOGLE_DRIVE = "google_drive"
+    const val WEBDAV = "webdav"
 
     // Future cloud storage providers:
     // const val DROPBOX = "dropbox"
@@ -42,12 +43,12 @@ object StorageTypes {
     /**
      * Get all available storage types
      */
-    val ALL_TYPES = listOf(LOCAL, GOOGLE_DRIVE)
+    val ALL_TYPES = listOf(LOCAL, GOOGLE_DRIVE, WEBDAV)
 
     /**
      * Get all cloud storage types (excluding local)
      */
-    val CLOUD_TYPES = listOf(GOOGLE_DRIVE)
+    val CLOUD_TYPES = listOf(GOOGLE_DRIVE, WEBDAV)
 
     /**
      * Check if the given storage type is a cloud storage type

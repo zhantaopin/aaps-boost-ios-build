@@ -1,10 +1,15 @@
 package app.aaps.core.ui.compose.dialogs
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -31,8 +36,10 @@ import app.aaps.core.data.format.NumberFormat
 import app.aaps.core.interfaces.InterfacesStrings
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.ui.CoreUiStrings
+import app.aaps.core.ui.compose.NumericKeypadDialog
 import app.aaps.core.ui.compose.formatMinutesAsDuration
 import app.aaps.core.ui.compose.isMinutesUnit
+import app.aaps.core.ui.compose.legacyImePlatform
 import app.aaps.core.ui.compose.stringResource
 import kotlin.math.roundToInt
 
@@ -73,6 +80,19 @@ fun ValueInputDialog(
     var isError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     val resolvedUnitLabel = unitLabel?.let { stringResource(it) } ?: ""
+
+    // Old Android watch IMEs neither send Done nor report their window, so there the field is
+    // read-only for the system IME and a tap opens the app's own keypad instead.
+    val useKeypad = legacyImePlatform
+    var showKeypad by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    if (useKeypad) {
+        LaunchedEffect(interactionSource) {
+            interactionSource.interactions.collect { interaction ->
+                if (interaction is PressInteraction.Release) showKeypad = true
+            }
+        }
+    }
 
     // The allowed range, shown under the field while the entry is good. The same line carries the
     // error message when the entry is bad - see the comment on that Text below.
@@ -146,9 +166,13 @@ fun ValueInputDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        // On a 320 dp wide screen the keyboard leaves very little room; without these two the
+        // dialog is clipped and the OK button ends up under the IME, so tapping it looks like
+        // nothing happens.
+        modifier = Modifier.imePadding(),
         title = label?.let { { Text(it) } },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 if (summary != null) {
                     Text(
                         text = summary,
@@ -167,6 +191,8 @@ fun ValueInputDialog(
                         }
                     },
                     singleLine = true,
+                    readOnly = useKeypad,
+                    interactionSource = interactionSource,
                     isError = isError,
                     // Only the duration preview lives in this slot now. The error used to be here,
                     // but this slot has no node at all while the entry is good, so the error line
@@ -221,4 +247,21 @@ fun ValueInputDialog(
             }
         }
     )
+
+    // Old Android: the keypad's ✓ is the Done key the watch IME never sends; it runs the same
+    // confirm path as the dialog's OK button.
+    if (showKeypad) {
+        NumericKeypadDialog(
+            title = label,
+            initialText = textFieldValue.text,
+            allowDecimal = step != step.roundToInt().toDouble(),
+            allowNegative = valueRange.start < 0,
+            onConfirm = { newText ->
+                textFieldValue = TextFieldValue(newText)
+                showKeypad = false
+                confirm()
+            },
+            onDismiss = { showKeypad = false }
+        )
+    }
 }

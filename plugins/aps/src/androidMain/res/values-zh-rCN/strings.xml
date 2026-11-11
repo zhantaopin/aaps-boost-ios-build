@@ -99,4 +99,35 @@
     <string name="smb_delivery_settings_title">SMB（微型大剂量）输注设置</string>
     <string name="boost_permission_body_sensors_title">心率</string>
     <string name="boost_permission_body_sensors_description">Boost 会采样本机的心率传感器，用于改进睡眠检测，并在开启后用于运动分类。</string>
+
+    <string name="boost_sensor_check_title">传感器自检</string>
+    <string name="boost_sensor_check_summary">检查本机计步与心率传感器、权限和最近数据（只读）</string>
+    <string name="boost_sensor_check_steps_enabled">手机计步</string>
+    <string name="boost_sensor_check_step_sensor">计步传感器</string>
+    <string name="boost_sensor_advanced_title">传感器（高级）</string>
+    <string name="boost_sensor_advanced_summary">计步与心率数据源，以及传感器自检。两个数据源默认关闭。</string>
+    <string name="boost_sensor_check_step_kind_counter">计数器</string>
+    <string name="boost_sensor_check_step_kind_detector">检测器（逐步）</string>
+    <string name="boost_sensor_check_other_step_sensors">其它步数传感器</string>
+    <string name="boost_sensor_check_step_registered">已注册监听</string>
+    <string name="boost_sensor_check_step_feed">步数上报状态</string>
+    <string name="boost_sensor_check_step_last_event">上次步数事件</string>
+    <string name="boost_sensor_check_steps_15m">近 15 分钟步数</string>
+    <string name="boost_sensor_check_hr_sensor">心率传感器</string>
+    <string name="boost_sensor_check_body_sensors">身体传感器权限</string>
+    <string name="boost_sensor_check_watch_hr">手表心率源</string>
+    <string name="boost_sensor_check_last_hr">最近一条心率</string>
+    <string name="boost_sensor_check_refresh">刷新</string>
+    <string name="boost_sensor_check_sample_hr">测 10 秒心率</string>
+    <string name="boost_sensor_check_back">返回</string>
+    <string name="boost_sensor_check_yes">有</string>
+    <string name="boost_sensor_check_no">无</string>
+    <string name="boost_sensor_check_none">无</string>
+    <string name="boost_sensor_check_never">从未</string>
+    <string name="boost_sensor_check_feed_live">正常</string>
+    <string name="boost_sensor_check_feed_none">从未上报</string>
+    <string name="boost_sensor_check_minutes_ago">%1$d 分钟前</string>
+    <string name="boost_sensor_check_watch_hr_on">开 · %1$d 分钟</string>
+    <string name="boost_sensor_check_hr_value">%1$d bpm · %2$s</string>
+    <string name="boost_sensor_check_sampling">采样中…</string>
 </resources>

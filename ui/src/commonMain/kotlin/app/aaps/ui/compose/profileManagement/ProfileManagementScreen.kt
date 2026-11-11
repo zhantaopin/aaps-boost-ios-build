@@ -3,6 +3,7 @@ package app.aaps.ui.compose.profileManagement
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -291,9 +292,14 @@ fun ProfileManagementScreen(
                             }
                         }
 
-                        Column(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
+                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                            // On a 320 dp wide screen the 140 dp name card plus the floating toolbar
+                            // leave too little room for the values below, which then sit under the
+                            // toolbar. Shrink the card there; wider screens keep the old height.
+                            val cardHeight = if (maxWidth < 360.dp) 86.dp else PROFILE_CARD_HEIGHT
+                            Column(
+                                modifier = Modifier.fillMaxSize()
+                            ) {
                             // Profile Carousel
                             val moveEarlierLabel = stringResource(CoreUiStrings.carousel_move_earlier)
                             val moveLaterLabel = stringResource(CoreUiStrings.carousel_move_later)
@@ -303,7 +309,7 @@ fun ProfileManagementScreen(
 
                             ManagementCarousel(
                                 state = pagerState,
-                                cardHeight = PROFILE_CARD_HEIGHT,
+                                cardHeight = cardHeight,
                                 reorder = workingOrder?.let { order ->
                                     CarouselReorderConfig(
                                         isActive = true,
@@ -406,6 +412,7 @@ fun ProfileManagementScreen(
                                     Spacer(modifier = Modifier.height(AapsSpacing.fabClearance))
                                 }
                             }
+                        }
                         }
                     } // end key
                 }

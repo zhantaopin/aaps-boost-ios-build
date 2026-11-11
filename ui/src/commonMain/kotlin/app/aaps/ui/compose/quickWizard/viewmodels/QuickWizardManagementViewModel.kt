@@ -324,14 +324,14 @@ class QuickWizardManagementViewModel(
                 when (mode) {
                     QuickWizardMode.WIZARD, QuickWizardMode.CARBS -> {
                         if (currentState.editorCarbs <= 0 && (!currentState.editorUseEcarbs || currentState.editorCarbs2 <= 0)) {
-                            rxBus.send(EventShowSnackbar("Carbs must be greater than 0", EventShowSnackbar.Type.Error))
+                            rxBus.send(EventShowSnackbar(rh.gs(CoreUiStrings.quick_wizard_carbs_must_be_positive), EventShowSnackbar.Type.Error))
                             return@launch
                         }
                     }
 
                     QuickWizardMode.INSULIN                       -> {
                         if (currentState.editorInsulin <= 0.0) {
-                            rxBus.send(EventShowSnackbar("Insulin must be greater than 0", EventShowSnackbar.Type.Error))
+                            rxBus.send(EventShowSnackbar(rh.gs(CoreUiStrings.quick_wizard_insulin_must_be_positive), EventShowSnackbar.Type.Error))
                             return@launch
                         }
                     }

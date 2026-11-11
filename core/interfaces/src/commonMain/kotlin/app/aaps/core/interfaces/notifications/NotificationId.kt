@@ -273,7 +273,10 @@ enum class NotificationId(
     BOOST_HISTORY_INSULIN_ASSUMED(IMPORTANT, SYSTEM),
 
     // Boost: the insulin-need watch. Its own id, so a later notice replaces only its own text. Appended at the END.
-    BOOST_NEED_WATCH(INFO, LOOP);
+    BOOST_NEED_WATCH(INFO, LOOP),
+
+    // A WebDAV backup could not be written or read. Appended at the END for the same reason as above.
+    WEBDAV_ERROR(IMPORTANT, SYSTEM);
 
     companion object {
 

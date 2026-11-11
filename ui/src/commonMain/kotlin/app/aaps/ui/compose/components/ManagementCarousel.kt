@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import app.aaps.core.ui.compose.AapsSpacing
+import app.aaps.core.ui.compose.longestScreenSideDp
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -66,8 +67,22 @@ object CarouselDefaults {
     /** Height of a carousel card. Most screens use this; profile management uses a shorter card. */
     val CardHeight: Dp = 200.dp
 
+    /**
+     * Card height for the current screen. On a 300-320 dp tall watch the 200 dp card plus the top
+     * bar leaves almost nothing for the editor below it, so the card is shortened there.
+     */
+    @Composable
+    fun cardHeight(): Dp = if (longestScreenSideDp() < 400) 86.dp else CardHeight
+
     /** Smallest horizontal padding on each side, so the neighbouring cards stay partially visible. */
     val ContentPadding: Dp = 64.dp
+
+    /**
+     * Side padding used by the pager. A 64 dp inset leaves a 172 dp card on a 300 dp watch, which
+     * forces every label to wrap; narrow screens keep only a slim hint of the neighbours.
+     */
+    @Composable
+    fun contentPadding(): Dp = if (longestScreenSideDp() < 400) 24.dp else ContentPadding
 
     /**
      * Widest a card may get. Without a limit a card fills a wide window (desktop, tablet, phone in
@@ -175,7 +190,7 @@ data class CarouselReorderConfig(
 fun ManagementCarousel(
     state: PagerState,
     modifier: Modifier = Modifier,
-    cardHeight: Dp = CarouselDefaults.CardHeight,
+    cardHeight: Dp = CarouselDefaults.cardHeight(),
     userScrollEnabled: Boolean = true,
     showIndicator: Boolean = true,
     reorder: CarouselReorderConfig? = null,
@@ -188,7 +203,7 @@ fun ManagementCarousel(
 
     Column(modifier = modifier.fillMaxWidth()) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val sidePadding = ((maxWidth - CarouselDefaults.MaxCardWidth) / 2).coerceAtLeast(CarouselDefaults.ContentPadding)
+            val sidePadding = ((maxWidth - CarouselDefaults.MaxCardWidth) / 2).coerceAtLeast(CarouselDefaults.contentPadding())
             HorizontalPager(
                 state = state,
                 modifier = Modifier
