@@ -31,7 +31,7 @@ permissions:
 jobs:
   apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
 
     steps:
       - uses: actions/checkout@v4
@@ -83,7 +83,8 @@ jobs:
           if [ "${PUMPCONTROL:-false}" = "true" ]; then TASKS="$TASKS :app:assemblePumpcontrolRelease"; fi
           if [ "${WEAR:-false}" = "true" ]; then TASKS="$TASKS :wear:assembleFullRelease"; fi
 
-          ./gradlew $TASKS --no-daemon \
+          ./gradlew $TASKS --no-daemon --max-workers=2 \
+            -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=512m" \
             -Pandroid.injected.signing.store.file="$PWD/signing/aaps.jks" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$(read_prop keyAlias)" \

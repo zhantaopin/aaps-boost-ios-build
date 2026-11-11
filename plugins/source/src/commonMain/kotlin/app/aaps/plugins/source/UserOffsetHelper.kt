@@ -21,7 +21,7 @@ fun applyUserOffset(
 ): Double {
     // Only apply offset when FixedOffsetPlugin is the active CALIBRATION plugin.
     // String comparison avoids :source → :calibration circular dependency.
-    val calClass = activePlugin.activeCalibration.javaClass.simpleName
+    val calClass = activePlugin.activeCalibration::class.simpleName
     if (calClass != "FixedOffsetPlugin") return rawValueMgdl
     val offset = preferences.get(CalibrationOffsetDoubleKey.UserOffset).coerceIn(-36.0, 36.0)
     return rawValueMgdl + offset
