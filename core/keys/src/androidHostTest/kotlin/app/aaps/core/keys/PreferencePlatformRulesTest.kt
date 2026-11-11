@@ -69,4 +69,17 @@ class PreferencePlatformRulesTest {
             "use_boost_overview_v2", AppPlatform.ANDROID_ONLY
         )
     }
+
+    /**
+     * The Boost overview is what a fresh install opens, clients included.
+     *
+     * The client ships the same overview route, and the switch is neither master-only nor hidden in
+     * client mode, so "default appearance" means Boost on all four Android builds. This guards the
+     * two flags that would silently send a client back to the standard overview.
+     */
+    @Test
+    fun `the boost overview is the default on clients too`() {
+        assertThat(BooleanKey.OverviewUseBoostOverviewV2.defaultValue).isTrue()
+        assertThat(BooleanKey.OverviewUseBoostOverviewV2.showInNsClientMode).isTrue()
+    }
 }

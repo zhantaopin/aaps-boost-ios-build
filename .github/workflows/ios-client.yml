@@ -1,0 +1,106 @@
+name: iOS client (unsigned ipa)
+
+# Builds the two iOS apps this repository has Xcode targets for - AAPSClient and AAPSClient2 -
+# and publishes UNSIGNED ipas as GitHub artifacts. There is no iOS AAPSClient3 and no iOS "full
+# AAPS" target here, so those are not produced.
+#
+# The packages are unsigned because signing needs an Apple developer account and a provisioning
+# profile that CI does not have. Install them with Sideloadly or AltStore, which re-sign with your
+# own Apple ID (a free account works; its signature expires after 7 days).
+#
+# If you later have a paid account, drop the .p12 and .mobileprovision into signing/ios/, add the
+# keychain import step, and replace CODE_SIGNING_ALLOWED=NO with a normal -exportArchive.
+#
+# macOS runners are billed at 10x, so this is manual-only and never runs on a tag.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-client-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      # The Xcode "Compile Kotlin Framework" phase calls /usr/libexec/java_home -v 21, which only
+      # sees JDKs installed as bundles under /Library/Java/JavaVirtualMachines. setup-java installs
+      # into the tool cache, so link it in when java_home cannot find 21 on its own.
+      - name: Make JDK 21 visible to java_home
+        shell: bash
+        run: |
+          if ! /usr/libexec/java_home -v 21 >/dev/null 2>&1; then
+            sudo mkdir -p /Library/Java/JavaVirtualMachines
+            sudo ln -sfn "$(dirname "$(dirname "$JAVA_HOME")")" /Library/Java/JavaVirtualMachines/temurin-21-ci.jdk
+          fi
+          /usr/libexec/java_home -v 21
+
+      # Gradle configures Android modules even when only an Apple target is linked, so it needs an
+      # SDK to resolve compileSdk against.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install platform 37 (preview channel)
+        run: sdkmanager --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
+
+      - name: Build unsigned ipas
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          APP_VERSION="$(sed -n 's/.*const val appVersion = "\(.*\)".*/\1/p' buildSrc/src/main/kotlin/Versions.kt | head -n 1)"
+          BOOST_VERSION="$(sed -n 's/.*const val boostVersion = "\(.*\)".*/\1/p' buildSrc/src/main/kotlin/Versions.kt | head -n 1)"
+          mkdir -p dist
+
+          for SCHEME in AAPSClient AAPSClient2; do
+            echo "::group::Archive $SCHEME"
+            rm -rf "build/$SCHEME.xcarchive" Payload
+            xcodebuild \
+              -project ios/app/AAPSClient.xcodeproj \
+              -scheme "$SCHEME" \
+              -configuration Release \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              -archivePath "build/$SCHEME.xcarchive" \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY="" \
+              archive
+
+            APP="$(find "build/$SCHEME.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' | head -n 1)"
+            if [ -z "$APP" ]; then
+              echo "::error::$SCHEME archived no .app"
+              exit 1
+            fi
+            mkdir -p Payload
+            cp -R "$APP" Payload/
+            # -y keeps the bundle's symlinks intact; a plain zip turns them into copies.
+            zip -qry "dist/AAPS-${APP_VERSION}-boost-${BOOST_VERSION}-${SCHEME}-unsigned.ipa" Payload
+            rm -rf Payload
+            echo "::endgroup::"
+          done
+
+          ls -lh dist
+
+      - name: Upload ipas
+        uses: actions/upload-artifact@v4
+        with:
+          name: aaps-boost-ios-unsigned
+          path: dist/*.ipa
+          if-no-files-found: error
+          retention-days: 30

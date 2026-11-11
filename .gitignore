@@ -57,8 +57,11 @@ plugins/aps/src/androidHostTest/resources/boost_v5_backtest/*.csv
 plugins/aps/src/androidHostTest/resources/boost_v1_backtest/*.csv
 plugins/aps/src/androidHostTest/resources/seqfc/seqfc_fixture.json
 
-# API 27 fork: local build outputs and signing material must never be committed
+# API 27 fork: local build outputs and signing material must never be committed,
+# except the one release keystore CI signs with. The repository is private and the
+# owner chose to keep it here instead of in GitHub Secrets - see signing/keystore.properties.
 /apk-out/
 *.aab
 *.jks
 *.keystore
+!/signing/aaps.jks

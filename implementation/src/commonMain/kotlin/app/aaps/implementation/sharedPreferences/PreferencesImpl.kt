@@ -15,6 +15,7 @@ import app.aaps.core.interfaces.utils.SafeParse
 import app.aaps.core.keys.BooleanComposedKey
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.BooleanNonKey
+import app.aaps.core.keys.CalibrationOffsetDoubleKey
 import app.aaps.core.keys.DoubleKey
 import app.aaps.core.keys.IntComposedKey
 import app.aaps.core.keys.IntKey
@@ -96,6 +97,7 @@ class PreferencesImpl(
         (BooleanComposedKey.entries +
             BooleanKey.entries +
             BooleanNonKey.entries +
+            CalibrationOffsetDoubleKey.entries +
             DoubleKey.entries +
             IntentKey.entries +
             IntKey.entries +

@@ -4,7 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 @Suppress("ConstPropertyName")
 object Versions {
 
-    // On change edit boost-ci.yml
+    // On change edit android-release.yml and ios-client.yml (they read this value for file names)
     const val appVersion = "4.0.0"
     const val versionCode = 1500
 

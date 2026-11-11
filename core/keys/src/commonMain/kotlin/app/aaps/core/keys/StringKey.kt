@@ -230,8 +230,8 @@ enum class StringKey(
     // Boost
     ApsBoostStartTime(key = "boost_start_time", defaultValue = "07:00", title = KeysStrings.pref_title_boost_start_time, defaultedBySM = true),
     ApsBoostEndTime(key = "boost_end_time", defaultValue = "07:01", title = KeysStrings.pref_title_boost_end_time, defaultedBySM = true),
-    ApsBoostNightModeStart(key = "boost_night_mode_start", defaultValue = "22:00", title = KeysStrings.pref_title_boost_night_mode_start, summary = KeysStrings.pref_summary_boost_night_mode_start, defaultedBySM = true),
-    ApsBoostNightModeEnd(key = "boost_night_mode_end", defaultValue = "07:00", title = KeysStrings.pref_title_boost_night_mode_end, summary = KeysStrings.pref_summary_boost_night_mode_end, defaultedBySM = true),
+    ApsBoostNightModeStart(key = "boost_night_mode_start", defaultValue = "22:00", title = KeysStrings.pref_title_boost_night_mode_start, summary = KeysStrings.pref_summary_boost_night_mode_start, defaultedBySM = true, sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)),
+    ApsBoostNightModeEnd(key = "boost_night_mode_end", defaultValue = "07:00", title = KeysStrings.pref_title_boost_night_mode_end, summary = KeysStrings.pref_summary_boost_night_mode_end, defaultedBySM = true, sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)),
     ApsBoostV5State(key = "boost_v5_state", defaultValue = "", title = KeysStrings.pref_title_boost_v5_state, defaultedBySM = true),
     ApsBoostVwaTddShadowState(key = "boost_vwa_tdd_shadow_state", defaultValue = "", title = KeysStrings.pref_title_boost_vwa_tdd_shadow_state, defaultedBySM = true),
     ApsBoostLastEngineMode(key = "boost_last_engine_mode", defaultValue = "", title = KeysStrings.pref_title_boost_last_engine_mode, defaultedBySM = true),
