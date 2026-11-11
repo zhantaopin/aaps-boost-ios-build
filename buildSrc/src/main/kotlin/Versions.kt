@@ -4,7 +4,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 @Suppress("ConstPropertyName")
 object Versions {
 
-    // On change edit android-release.yml and ios-client.yml (they read this value for file names)
+    // ios-client.yml reads this for the ipa file names. The Android APKs are built locally
+    // (assembleFullRelease / assembleAapsclientRelease), so they use it only in their own names.
     const val appVersion = "4.0.0"
     const val versionCode = 1500
 
