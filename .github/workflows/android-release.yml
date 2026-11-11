@@ -43,13 +43,21 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      # compileSdk is 37, which is a preview API level: it is published on the preview channel
-      # under the versioned package id android-37.0. build-tools 37.0.0 also brings apksigner.
+      # ubuntu-latest ships an Android SDK and sdkmanager; android-actions/setup-android cannot be
+      # used here because it insists on the retired `tools` package ("Failed to find package
+      # 'tools'"). compileSdk 37 is a preview level, published on the preview channel under the
+      # versioned package id android-37.0. build-tools 37.0.0 also brings apksigner.
       - name: Install platform 37 (preview channel)
-        run: sdkmanager --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/cmdline-tools/*/bin/sdkmanager | head -n 1)"
+          fi
+          echo "sdkmanager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
 
       - name: Build and sign
         shell: bash
