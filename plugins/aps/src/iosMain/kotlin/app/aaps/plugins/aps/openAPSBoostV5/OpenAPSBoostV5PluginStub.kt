@@ -3,6 +3,7 @@ package app.aaps.plugins.aps.openAPSBoostV5
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.APSResult
+import app.aaps.core.interfaces.aps.GlucoseStatus
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.PluginBaseWithPreferences
@@ -13,12 +14,12 @@ import app.aaps.core.keys.DoubleKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.UnitDoubleKey
+import app.aaps.core.keys.interfaces.PreferenceItem
 import app.aaps.core.keys.interfaces.Preferences
+import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.icons.IcPluginOpenAPS
-import app.aaps.core.ui.compose.preference.PreferenceItem
 import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.plugins.aps.ApsStrings
-import app.aaps.plugins.aps.CoreUiStrings
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
@@ -68,10 +69,10 @@ class OpenAPSBoostV5PluginStub @Inject constructor(
     PluginDescription()
         .mainType(PluginType.APS)
         .icon(IcPluginOpenAPS)
-        .pluginName("Boost V5")
+        .pluginName(ApsStrings.openaps_boost_v5)
         .preferencesVisibleInSimpleMode(true)
         .showInList { true }
-        .description("Boost V5 — Observe-Confirm-Commit dosing engine (iOS client configures master)"),
+        .description(ApsStrings.description_boost_v5),
     ownPreferences = ALL_BOOST_BIDIRECTIONAL_KEYS,
     aapsLogger, rh, preferences, notificationManager
 ), APS {
@@ -245,6 +246,8 @@ class OpenAPSBoostV5PluginStub @Inject constructor(
     override suspend fun invoke(initiator: String, tempBasalFallback: Boolean) {
         // no-op on iOS client; master runs the engine
     }
+
+    override fun getGlucoseStatusData(allowOldData: Boolean): GlucoseStatus? = null
 
     companion object {
         /** Every Boost-specific key that has Bidirectional sync — iOS client edits these
