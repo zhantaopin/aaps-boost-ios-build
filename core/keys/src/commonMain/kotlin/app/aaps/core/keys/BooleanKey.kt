@@ -324,7 +324,7 @@ enum class BooleanKey(
     // Standalone-Android-watch heart rate source. Off by default: it samples the device's own PPG
     // sensor, so it must be an explicit choice on a battery-constrained device.
     ApsBoostWatchHrEnabled("boost_watch_hr_enabled", false, KeysStrings.pref_title_boost_watch_hr_enabled, summary = KeysStrings.pref_summary_boost_watch_hr_enabled, defaultedBySM = true, sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)),
-    ApsBoostV2ChartFaithful("boost_v2_chart_faithful", false, KeysStrings.pref_title_boost_v2_chart_faithful, defaultedBySM = true, sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)),
+    ApsBoostV2ChartFaithful("boost_v2_chart_faithful", false, KeysStrings.pref_title_boost_v2_chart_faithful, defaultedBySM = true),
 
     /**
      * Run the loop at the sensor's own cadence instead of once per five minutes.
