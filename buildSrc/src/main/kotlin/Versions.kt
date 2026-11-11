@@ -4,8 +4,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 @Suppress("ConstPropertyName")
 object Versions {
 
-    // ios-client.yml reads this for the ipa file names. The Android APKs are built locally
-    // (assembleFullRelease / assembleAapsclientRelease), so they use it only in their own names.
+    // Both workflows read this for their artifact names: ios-client.yml for the .ipa files,
+    // android-release.yml for the APKs. Local builds (assembleFullRelease / assembleAapsclientRelease)
+    // use it in their file names as well.
     const val appVersion = "4.0.0"
     const val versionCode = 1500
 
