@@ -66,7 +66,9 @@ jobs:
           fi
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
-          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          # `yes` dies with SIGPIPE once sdkmanager stops asking; pipefail would make that the step's
+          # exit code, so the license prompt is deliberately allowed to "fail".
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$SDK/cmdline-tools/latest/bin/sdkmanager" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
 
       - name: Build unsigned ipas

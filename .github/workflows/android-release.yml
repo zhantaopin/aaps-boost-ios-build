@@ -56,7 +56,9 @@ jobs:
             SDKMANAGER="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/cmdline-tools/*/bin/sdkmanager | head -n 1)"
           fi
           echo "sdkmanager: $SDKMANAGER"
-          yes | "$SDKMANAGER" --licenses > /dev/null
+          # `yes` dies with SIGPIPE once sdkmanager stops asking; pipefail would make that the step's
+          # exit code, so the license prompt is deliberately allowed to "fail".
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
           "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
 
       - name: Build and sign
