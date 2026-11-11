@@ -153,7 +153,7 @@ open class OpenAPSBoostV5Plugin @Inject constructor(
         .icon(IcPluginOpenAPS)
         .pluginName(ApsStrings.openaps_boost_v5)
         .preferencesVisibleInSimpleMode(false)
-        .showInList { config.APS }
+        .showInList { config.APS || config.AAPSCLIENT }   // AAPSCLIENT: visible so a client can see the master's APS
         .description(ApsStrings.description_boost_v5)
         // Boost V6 is the default APS engine on a fresh install (moved from OpenAPSSMBPlugin) — this
         // fork exists to run V6, so a clean DB selects it directly rather than starting on stock SMB.

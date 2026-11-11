@@ -199,7 +199,7 @@ open class OpenAPSBoostPlugin @Inject constructor(
         .icon(IcPluginOpenAPS)
         .pluginName(ApsStrings.openaps_boost)
         .preferencesVisibleInSimpleMode(false)
-        .showInList { config.APS }
+        .showInList { config.APS || config.AAPSCLIENT }   // AAPSCLIENT: visible so a client can see the master's APS
         .description(ApsStrings.description_boost),
     ownPreferences = emptyList(),
     aapsLogger, rh, preferences, notificationManager
