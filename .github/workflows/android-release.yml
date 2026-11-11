@@ -28,9 +28,9 @@ concurrency:
 permissions:
   contents: write # attach assets to the Release on a tag push
 
-# ubuntu-latest (2-core/7GB) OOMs after ~30min on KMP 40+ module release build
-# with default concurrency. --max-workers=1 -Xmx2g -XX:MaxMetaspaceSize=256m keeps
-# each Gradle daemon under 3GB so two concurrent builds still fit in 7GB total.
+# ubuntu-latest (2-core/7GB) OOMs on KMP 40+ module release builds.
+# -Xmx3g -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=128m per daemon.
+# Jobs run sequentially so only ONE Gradle process competes for RAM at a time.
 
 jobs:
   # ── Shared setup steps (checkout + JDK21 + platform-37) ─────────────────────
@@ -137,7 +137,7 @@ jobs:
           echo "::add-mask::$KEY_PASSWORD"
 
           ./gradlew :app:assembleFullRelease --no-daemon --max-workers=1 \
-            -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=256m" \
+            -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=128m" \
             -Pandroid.injected.signing.store.file="$PWD/signing/aaps.jks" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
@@ -162,7 +162,7 @@ jobs:
 
   # ── Build AAPSClient + AAPSClient2 + AAPSClient3 APKs ───────────────────────
   apk-clients:
-    needs: setup
+    needs: [setup, apk-full]
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
@@ -202,7 +202,7 @@ jobs:
 
           ./gradlew :app:assembleAapsclientRelease :app:assembleAapsclient2Release :app:assembleAapsclient3Release \
             --no-daemon --max-workers=1 \
-            -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=256m" \
+            -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=128m" \
             -Pandroid.injected.signing.store.file="$PWD/signing/aaps.jks" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
@@ -230,7 +230,7 @@ jobs:
   # ── Optional extras: pumpcontrol + wear ────────────────────────────────────
   apk-extras:
     if: inputs.pumpcontrol || inputs.wear
-    needs: setup
+    needs: [setup, apk-clients]
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
@@ -277,7 +277,7 @@ jobs:
           [ -z "$TASKS" ] && exit 0
 
           ./gradlew $TASKS --no-daemon --max-workers=1 \
-            -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=256m" \
+            -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=128m" \
             -Pandroid.injected.signing.store.file="$PWD/signing/aaps.jks" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
