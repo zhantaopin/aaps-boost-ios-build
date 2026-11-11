@@ -11,10 +11,12 @@ name: iOS client (unsigned ipa)
 # If you later have a paid account, drop the .p12 and .mobileprovision into signing/ios/, add the
 # keychain import step, and replace CODE_SIGNING_ALLOWED=NO with a normal -exportArchive.
 #
-# macOS runners are billed at 10x, so this is manual-only and never runs on a tag.
-
+# macOS runners are billed at 10x, so this normally runs manually only.
+# Release tags (v*) also rebuild the ipas so a tagged release ships them.
 on:
   workflow_dispatch:
+  push:
+    tags: ['v*']
 
 concurrency:
   group: ios-client-${{ github.ref }}
