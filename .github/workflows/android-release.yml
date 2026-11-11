@@ -28,11 +28,22 @@ concurrency:
 permissions:
   contents: write # attach assets to the Release on a tag push
 
-jobs:
-  apk:
-    runs-on: ubuntu-latest-4-cores
-    timeout-minutes: 180
+# ubuntu-latest (2-core/7GB) OOMs after ~30min on KMP 40+ module release build
+# with default concurrency. --max-workers=1 -Xmx2g -XX:MaxMetaspaceSize=256m keeps
+# each Gradle daemon under 3GB so two concurrent builds still fit in 7GB total.
 
+jobs:
+  # ── Shared setup steps (checkout + JDK21 + platform-37) ─────────────────────
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      app_version: ${{ steps.versions.outputs.app_version }}
+      boost_version: ${{ steps.versions.outputs.boost_version }}
+      store_password: ${{ steps.signing.outputs.store_password }}
+      key_password: ${{ steps.signing.outputs.key_password }}
+      key_alias: ${{ steps.signing.outputs.key_alias }}
+      store_type: ${{ steps.signing.outputs.store_type }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,10 +54,6 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      # ubuntu-latest ships an Android SDK and sdkmanager; android-actions/setup-android cannot be
-      # used here because it insists on the retired `tools` package ("Failed to find package
-      # 'tools'"). compileSdk 37 is a preview level, published on the preview channel under the
-      # versioned package id android-37.0. build-tools 37.0.0 also brings apksigner.
       - name: Install platform 37 (preview channel)
         shell: bash
         run: |
@@ -56,12 +63,198 @@ jobs:
             SDKMANAGER="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/cmdline-tools/*/bin/sdkmanager | head -n 1)"
           fi
           echo "sdkmanager: $SDKMANAGER"
-          # `yes` dies with SIGPIPE once sdkmanager stops asking; pipefail would make that the step's
-          # exit code, so the license prompt is deliberately allowed to "fail".
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
+
+      - name: Extract versions + signing
+        id: versions
+        shell: bash
+        run: |
+          echo "app_version=$(sed -n 's/.*const val appVersion = "\(.*\)".*/\1/p' buildSrc/src/main/kotlin/Versions.kt | head -n 1)" >> "$GITHUB_OUTPUT"
+          echo "boost_version=$(sed -n 's/.*const val boostVersion = "\(.*\)".*/\1/p' buildSrc/src/main/kotlin/Versions.kt | head -n 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Read signing secrets
+        id: signing
+        shell: bash
+        run: |
+          read_prop() { sed -n "s/^$1=//p" signing/keystore.properties | head -n 1; }
+          STORE_PASSWORD="$(read_prop storePassword)"
+          KEY_PASSWORD="$(read_prop keyPassword)"
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+          echo "store_password=$STORE_PASSWORD" >> "$GITHUB_OUTPUT"
+          echo "key_password=$KEY_PASSWORD" >> "$GITHUB_OUTPUT"
+          echo "key_alias=$(read_prop keyAlias)" >> "$GITHUB_OUTPUT"
+          echo "store_type=$(read_prop storeType)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Gradle state (artifact pass-through)
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-state-base
+          path: .
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 1
+
+  # ── Build AAPS full APK (master) ────────────────────────────────────────────
+  apk-full:
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Install platform 37 (preview channel)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/cmdline-tools/*/bin/sdkmanager | head -n 1)"
+          fi
           yes | "$SDKMANAGER" --licenses > /dev/null || true
           "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
 
       - name: Build and sign
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          APP_VERSION="${{ needs.setup.outputs.app_version }}"
+          BOOST_VERSION="${{ needs.setup.outputs.boost_version }}"
+          STORE_PASSWORD="${{ needs.setup.outputs.store_password }}"
+          KEY_PASSWORD="${{ needs.setup.outputs.key_password }}"
+          KEY_ALIAS="${{ needs.setup.outputs.key_alias }}"
+          STORE_TYPE="${{ needs.setup.outputs.store_type }}"
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+
+          ./gradlew :app:assembleFullRelease --no-daemon --max-workers=1 \
+            -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=256m" \
+            -Pandroid.injected.signing.store.file="$PWD/signing/aaps.jks" \
+            -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
+            -Pandroid.injected.signing.store.type="$STORE_TYPE"
+
+          APKSIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          mkdir -p dist
+          SRC="$(find app/build/outputs/apk/full/release -maxdepth 1 -name '*-release.apk' ! -name '*-unsigned.apk' | head -n 1)"
+          OUT="dist/AAPS-${APP_VERSION}-boost-${BOOST_VERSION}-full.apk"
+          cp "$SRC" "$OUT"
+          "$APKSIGNER" verify "$OUT"
+          ls -lh dist
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aaps-full
+          path: dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  # ── Build AAPSClient + AAPSClient2 + AAPSClient3 APKs ───────────────────────
+  apk-clients:
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Install platform 37 (preview channel)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/cmdline-tools/*/bin/sdkmanager | head -n 1)"
+          fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
+
+      - name: Build and sign clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          APP_VERSION="${{ needs.setup.outputs.app_version }}"
+          BOOST_VERSION="${{ needs.setup.outputs.boost_version }}"
+          STORE_PASSWORD="${{ needs.setup.outputs.store_password }}"
+          KEY_PASSWORD="${{ needs.setup.outputs.key_password }}"
+          KEY_ALIAS="${{ needs.setup.outputs.key_alias }}"
+          STORE_TYPE="${{ needs.setup.outputs.store_type }}"
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+
+          ./gradlew :app:assembleAapsclientRelease :app:assembleAapsclient2Release :app:assembleAapsclient3Release \
+            --no-daemon --max-workers=1 \
+            -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=256m" \
+            -Pandroid.injected.signing.store.file="$PWD/signing/aaps.jks" \
+            -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
+            -Pandroid.injected.signing.store.type="$STORE_TYPE"
+
+          APKSIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          mkdir -p dist
+          for FLAVOR in aapsclient aapsclient2 aapsclient3; do
+            SRC="$(find app/build/outputs/apk/$FLAVOR/release -maxdepth 1 -name '*-release.apk' ! -name '*-unsigned.apk' | head -n 1)"
+            OUT="dist/AAPS-${APP_VERSION}-boost-${BOOST_VERSION}-$FLAVOR.apk"
+            cp "$SRC" "$OUT"
+            "$APKSIGNER" verify "$OUT"
+          done
+          ls -lh dist
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: aaps-clients
+          path: dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  # ── Optional extras: pumpcontrol + wear ────────────────────────────────────
+  apk-extras:
+    if: inputs.pumpcontrol || inputs.wear
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Install platform 37 (preview channel)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/cmdline-tools/*/bin/sdkmanager | head -n 1)"
+          fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
+
+      - name: Build extras
         shell: bash
         env:
           PUMPCONTROL: ${{ inputs.pumpcontrol }}
@@ -69,71 +262,66 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x gradlew
-
-          # The keystore is committed in this private repository because the owner did not want to
-          # keep it in GitHub Secrets. Mask the passwords so nothing can echo them, and hand them to
-          # AGP as injected signing properties so build.gradle.kts stays free of signing material.
-          read_prop() { sed -n "s/^$1=//p" signing/keystore.properties | head -n 1; }
-          STORE_PASSWORD="$(read_prop storePassword)"
-          KEY_PASSWORD="$(read_prop keyPassword)"
+          APP_VERSION="${{ needs.setup.outputs.app_version }}"
+          BOOST_VERSION="${{ needs.setup.outputs.boost_version }}"
+          STORE_PASSWORD="${{ needs.setup.outputs.store_password }}"
+          KEY_PASSWORD="${{ needs.setup.outputs.key_password }}"
+          KEY_ALIAS="${{ needs.setup.outputs.key_alias }}"
+          STORE_TYPE="${{ needs.setup.outputs.store_type }}"
           echo "::add-mask::$STORE_PASSWORD"
           echo "::add-mask::$KEY_PASSWORD"
 
-          TASKS=":app:assembleFullRelease :app:assembleAapsclientRelease :app:assembleAapsclient2Release :app:assembleAapsclient3Release"
+          TASKS=""
           if [ "${PUMPCONTROL:-false}" = "true" ]; then TASKS="$TASKS :app:assemblePumpcontrolRelease"; fi
           if [ "${WEAR:-false}" = "true" ]; then TASKS="$TASKS :wear:assembleFullRelease"; fi
+          [ -z "$TASKS" ] && exit 0
 
-          ./gradlew $TASKS --no-daemon --max-workers=2 \
-            -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=512m" \
+          ./gradlew $TASKS --no-daemon --max-workers=1 \
+            -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=256m" \
             -Pandroid.injected.signing.store.file="$PWD/signing/aaps.jks" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$(read_prop keyAlias)" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
-            -Pandroid.injected.signing.store.type="$(read_prop storeType)"
+            -Pandroid.injected.signing.store.type="$STORE_TYPE"
 
-      - name: Name and verify the APKs
-        shell: bash
-        env:
-          PUMPCONTROL: ${{ inputs.pumpcontrol }}
-          WEAR: ${{ inputs.wear }}
-        run: |
-          set -euo pipefail
-          APP_VERSION="$(sed -n 's/.*const val appVersion = "\(.*\)".*/\1/p' buildSrc/src/main/kotlin/Versions.kt | head -n 1)"
-          BOOST_VERSION="$(sed -n 's/.*const val boostVersion = "\(.*\)".*/\1/p' buildSrc/src/main/kotlin/Versions.kt | head -n 1)"
           APKSIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
-
           mkdir -p dist
-          collect() { # <module> <flavour> <label>
-            local src out
-            src="$(find "$1/build/outputs/apk/$2/release" -maxdepth 1 -name '*-release.apk' ! -name '*-unsigned.apk' | head -n 1)"
-            if [ -z "$src" ]; then
-              echo "::error::no signed $1/$2 release APK found"
-              exit 1
-            fi
-            out="dist/AAPS-${APP_VERSION}-boost-${BOOST_VERSION}-$3.apk"
-            cp "$src" "$out"
-            "$APKSIGNER" verify "$out"
-          }
-
-          collect app full full
-          collect app aapsclient aapsclient
-          collect app aapsclient2 aapsclient2
-          collect app aapsclient3 aapsclient3
-          if [ "${PUMPCONTROL:-false}" = "true" ]; then collect app pumpcontrol pumpcontrol; fi
-          if [ "${WEAR:-false}" = "true" ]; then collect wear full wear; fi
-
+          if [ "${PUMPCONTROL:-false}" = "true" ]; then
+            SRC="$(find app/build/outputs/apk/pumpcontrol/release -maxdepth 1 -name '*-release.apk' ! -name '*-unsigned.apk' | head -n 1)"
+            cp "$SRC" "dist/AAPS-${APP_VERSION}-boost-${BOOST_VERSION}-pumpcontrol.apk"
+            "$APKSIGNER" verify "dist/AAPS-${APP_VERSION}-boost-${BOOST_VERSION}-pumpcontrol.apk"
+          fi
+          if [ "${WEAR:-false}" = "true" ]; then
+            SRC="$(find wear/build/outputs/apk/full/release -maxdepth 1 -name '*-release.apk' ! -name '*-unsigned.apk' | head -n 1)"
+            cp "$SRC" "dist/AAPS-${APP_VERSION}-boost-${BOOST_VERSION}-wear.apk"
+            "$APKSIGNER" verify "dist/AAPS-${APP_VERSION}-boost-${BOOST_VERSION}-wear.apk"
+          fi
           ls -lh dist
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: aaps-boost-apks
+          name: aaps-extras
           path: dist/*.apk
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
 
+  # ── Gather all artifacts + attach to Release on tag push ──────────────────
+  release:
+    needs: [setup, apk-full, apk-clients]
+    if: always() && (needs.apk-full.result == 'success' || needs.apk-clients.result == 'success') && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all APK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: aaps-*
+          merge-multiple: true
+
       - name: Attach APKs to the Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.apk
