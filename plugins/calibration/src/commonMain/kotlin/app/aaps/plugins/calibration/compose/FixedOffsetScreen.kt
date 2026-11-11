@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.data.configuration.Constants
+import app.aaps.core.data.format.NumberFormat
 import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.AapsCard
@@ -91,7 +92,7 @@ private fun FixedOffsetContent(
                 Text(
                     text = stringResource(
                         CalibrationStrings.fixed_offset_hint,
-                        "${if (offsetInUnits >= 0) "+" else ""}${offsetInUnits.formatSign(1)} $displayUnits"
+                        "${offsetInUnits.formatSign(1)} $displayUnits"
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -136,5 +137,14 @@ private fun FixedOffsetContent(
     }
 }
 
-private fun Double.formatSign(decimals: Int = 1): String =
-    String.format("%+.${decimals}f", this)
+/**
+ * Signed text with [decimals] decimals, e.g. `+0.8`.
+ *
+ * `String.format` is JVM-only and this file is also compiled for iOS, so it goes through
+ * [NumberFormat], which is plain Kotlin and already knows the locale separator.
+ */
+private fun Double.formatSign(decimals: Int = 1): String {
+    val text = NumberFormat.withDecimalsHalfUp(decimals).format(this)
+    // The old `%+` pattern signed zero as well; keep that rather than testing > 0.
+    return if (this >= 0) "+$text" else text
+}
