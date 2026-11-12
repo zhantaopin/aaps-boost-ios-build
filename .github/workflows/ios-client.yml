@@ -16,7 +16,7 @@ name: iOS client (unsigned ipa)
 on:
   workflow_dispatch:
   push:
-    tags: ['v*']
+    tags: ['v*', 'ios-*']
 
 concurrency:
   group: ios-client-${{ github.ref }}
