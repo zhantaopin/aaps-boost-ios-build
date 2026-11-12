@@ -1,0 +1,214 @@
+name: iOS client (unsigned ipa)
+
+# Builds the two iOS apps this repository has Xcode targets for - AAPSClient and AAPSClient2 -
+# and publishes UNSIGNED ipas as GitHub artifacts. There is no iOS AAPSClient3 and no iOS "full
+# AAPS" target here, so those are not produced.
+#
+# The packages are unsigned because signing needs an Apple developer account and a provisioning
+# profile that CI does not have. Install them with Sideloadly or AltStore, which re-sign with your
+# own Apple ID (a free account works; its signature expires after 7 days).
+#
+# Two choices here are deliberate, and both were learned the hard way by the AndroidAPS repo:
+#
+#   1. macos-15-intel. The standard arm64 macOS runner has 3 vCPU / 7 GB, and the Kotlin/Native
+#      release link phase swaps itself to death there - a build that never finishes and never
+#      prints anything. The Intel standard runner is 4 vCPU / 14 GB and links without paging.
+#   2. Debug by default. An unsigned package is for sideloading, and Debug is functionally
+#      identical to Release - just unoptimised and larger - while linking takes a fraction of the
+#      time. Dispatch the workflow with `release` when a Release build is really wanted.
+#
+# The Kotlin link is its own step rather than living only inside the Xcode Run Script phase: inside
+# Xcode it prints nothing, so a stuck build is indistinguishable from a slow one. Run on its own,
+# every `> Task` shows up live, and the later archive finds the task up to date.
+
+on:
+  workflow_dispatch:
+    inputs:
+      scheme:
+        description: 'Xcode scheme'
+        default: both
+        type: choice
+        options: [both, AAPSClient, AAPSClient2]
+      configuration:
+        description: 'Build configuration'
+        default: Debug
+        type: choice
+        options: [Debug, Release]
+  push:
+    tags: ['v*', 'ios-*']
+
+concurrency:
+  group: ios-client-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CONFIG: ${{ inputs.configuration || 'Debug' }}
+  SCHEME: ${{ inputs.scheme || 'both' }}
+  # Release linking needs more headroom than the runner's default heap. On the 14 GB Intel runner:
+  # Gradle daemon 8g, Kotlin/Native daemon 6g, and macOS + Xcode take the remaining ~2-3g.
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx8g -Dkotlin.daemon.jvm.options=-Xmx6g"
+
+jobs:
+  ipa:
+    runs-on: macos-15-intel
+    timeout-minutes: 100
+
+    steps:
+      - name: Show environment
+        run: |
+          echo "runner: ${{ runner.os }} / ${{ runner.arch }}"
+          sysctl -n hw.ncpu hw.memsize | awk 'NR==1{print "cpus: "$1} NR==2{print "ram: "$1/1024/1024/1024" GB"}'
+          sw_vers
+          xcodebuild -version
+
+      - uses: actions/checkout@v4
+        with:
+          # The build stamp shown in About comes from `git describe`; a shallow clone has no tags.
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      # The Xcode "Compile Kotlin Framework" phase calls /usr/libexec/java_home -v 21, which only
+      # sees JDKs installed as bundles under /Library/Java/JavaVirtualMachines. setup-java installs
+      # into the tool cache, so link it in when java_home cannot find 21 on its own.
+      - name: Make JDK 21 visible to java_home
+        shell: bash
+        run: |
+          if ! /usr/libexec/java_home -v 21 >/dev/null 2>&1; then
+            sudo mkdir -p /Library/Java/JavaVirtualMachines
+            sudo ln -sfn "$(dirname "$(dirname "$JAVA_HOME")")" /Library/Java/JavaVirtualMachines/temurin-21-ci.jdk
+          fi
+          /usr/libexec/java_home -v 21
+
+      # Gradle configures the Android modules even when only an Apple target is linked, so it needs
+      # an SDK location. macOS runners do not ship one, so bootstrap cmdline-tools and install
+      # compileSdk 37 (preview channel, package id android-37.0) exactly like the Android job.
+      - name: Set up Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_HOME:-$HOME/android-sdk}"
+          if [ ! -x "$SDK/cmdline-tools/latest/bin/sdkmanager" ]; then
+            mkdir -p "$SDK/cmdline-tools"
+            curl -fsSL "https://dl.google.com/android/repository/commandlinetools-mac-11076708_latest.zip" -o /tmp/cmdline-tools.zip
+            unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
+            mv /tmp/cmdline-tools/cmdline-tools "$SDK/cmdline-tools/latest"
+          fi
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          # `yes` dies with SIGPIPE once sdkmanager stops asking; pipefail would make that the step's
+          # exit code, so the license prompt is deliberately allowed to "fail".
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
+
+      # The Kotlin/Native compiler and its prebuilt libraries are about 1 GB; cache the download.
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-${{ runner.arch }}-
+            konan-${{ runner.os }}-
+
+      # Writes Version.xcconfig (MARKETING_VERSION / CURRENT_PROJECT_VERSION), which
+      # Signing.xcconfig includes optionally.
+      - name: Generate the version numbers
+        run: ./gradlew --console=plain --no-daemon :ios:shell:generateIosVersionXcconfig
+
+      # Signing.xcconfig has `#include? "Signing.local.xcconfig"`; write an empty team there and
+      # switch signing off wholesale. Without this the archive stops with "requires a development
+      # team" on a runner that has no certificates.
+      - name: Disable signing
+        run: |
+          cat > ios/app/Signing.local.xcconfig <<EOF
+          DEVELOPMENT_TEAM =
+          CODE_SIGN_STYLE = Manual
+          CODE_SIGN_IDENTITY =
+          CODE_SIGNING_REQUIRED = NO
+          CODE_SIGNING_ALLOWED = NO
+          EOF
+          cat ios/app/Signing.local.xcconfig
+
+      - name: Link Kotlin framework (${{ env.CONFIG }}, device)
+        run: |
+          set -o pipefail
+          case "$CONFIG" in
+            Debug)   TASK=:ios:shell:linkDebugFrameworkIosArm64 ;;
+            Release) TASK=:ios:shell:linkReleaseFrameworkIosArm64 ;;
+            *) echo "::error::unsupported configuration $CONFIG" >&2; exit 1 ;;
+          esac
+          echo "task: $TASK"
+          chmod +x gradlew
+          ./gradlew --console=plain --no-daemon --stacktrace "$TASK" | tee link.log
+
+      - name: Build unsigned ipas
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          case "$SCHEME" in
+            both)          SCHEMES="AAPSClient AAPSClient2" ;;
+            AAPSClient)    SCHEMES="AAPSClient" ;;
+            AAPSClient2)   SCHEMES="AAPSClient2" ;;
+            *) echo "::error::unsupported scheme $SCHEME" >&2; exit 1 ;;
+          esac
+
+          for S in $SCHEMES; do
+            echo "::group::Archive $S"
+            rm -rf "$RUNNER_TEMP/$S.xcarchive" "$RUNNER_TEMP/Payload"
+            xcodebuild \
+              -project ios/app/AAPSClient.xcodeproj \
+              -scheme "$S" \
+              -configuration "$CONFIG" \
+              -destination 'generic/platform=iOS' \
+              -archivePath "$RUNNER_TEMP/$S.xcarchive" \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY= \
+              CODE_SIGN_STYLE=Manual \
+              DEVELOPMENT_TEAM= \
+              ONLY_ACTIVE_ARCH=NO \
+              archive | tee "archive-$S.log"
+
+            APP="$(find "$RUNNER_TEMP/$S.xcarchive/Products" -name '*.app' -type d -print -quit)"
+            if [ -z "$APP" ]; then
+              echo "::error::$S archived no .app"
+              exit 1
+            fi
+            mkdir -p "$RUNNER_TEMP/Payload"
+            cp -R "$APP" "$RUNNER_TEMP/Payload/"
+            # ditto, unlike `zip -r`, keeps symlinks and extended attributes intact.
+            ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/Payload" "dist/$S-unsigned.ipa"
+            rm -rf "$RUNNER_TEMP/Payload"
+            echo "::endgroup::"
+          done
+
+          ls -lh dist
+
+      - name: Upload ipas
+        uses: actions/upload-artifact@v4
+        with:
+          name: aaps-boost-ios-unsigned
+          path: dist/*.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Keep the build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs
+          path: |
+            link.log
+            archive-*.log
+          if-no-files-found: ignore
+          retention-days: 7

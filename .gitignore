@@ -1,0 +1,7 @@
+.gradle/
+build/
+local.properties
+*.iml
+.DS_Store
+ios/app/Signing.local.xcconfig
+ios/app/Version.xcconfig
