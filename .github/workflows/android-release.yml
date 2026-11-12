@@ -40,10 +40,6 @@ jobs:
     outputs:
       app_version: ${{ steps.versions.outputs.app_version }}
       boost_version: ${{ steps.versions.outputs.boost_version }}
-      store_password: ${{ steps.signing.outputs.store_password }}
-      key_password: ${{ steps.signing.outputs.key_password }}
-      key_alias: ${{ steps.signing.outputs.key_alias }}
-      store_type: ${{ steps.signing.outputs.store_type }}
     steps:
       - uses: actions/checkout@v4
 
@@ -66,26 +62,12 @@ jobs:
           yes | "$SDKMANAGER" --licenses > /dev/null || true
           "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
 
-      - name: Extract versions + signing
+      - name: Extract versions
         id: versions
         shell: bash
         run: |
           echo "app_version=$(sed -n 's/.*const val appVersion = "\(.*\)".*/\1/p' buildSrc/src/main/kotlin/Versions.kt | head -n 1)" >> "$GITHUB_OUTPUT"
           echo "boost_version=$(sed -n 's/.*const val boostVersion = "\(.*\)".*/\1/p' buildSrc/src/main/kotlin/Versions.kt | head -n 1)" >> "$GITHUB_OUTPUT"
-
-      - name: Read signing secrets
-        id: signing
-        shell: bash
-        run: |
-          read_prop() { sed -n "s/^$1=//p" signing/keystore.properties | head -n 1; }
-          STORE_PASSWORD="$(read_prop storePassword)"
-          KEY_PASSWORD="$(read_prop keyPassword)"
-          echo "::add-mask::$STORE_PASSWORD"
-          echo "::add-mask::$KEY_PASSWORD"
-          echo "store_password=$STORE_PASSWORD" >> "$GITHUB_OUTPUT"
-          echo "key_password=$KEY_PASSWORD" >> "$GITHUB_OUTPUT"
-          echo "key_alias=$(read_prop keyAlias)" >> "$GITHUB_OUTPUT"
-          echo "store_type=$(read_prop storeType)" >> "$GITHUB_OUTPUT"
 
       - name: Upload Gradle state (artifact pass-through)
         uses: actions/upload-artifact@v4
@@ -122,6 +104,20 @@ jobs:
           yes | "$SDKMANAGER" --licenses > /dev/null || true
           "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
 
+      - name: Read signing material
+        id: signing
+        shell: bash
+        run: |
+          read_prop() { sed -n "s/^$1=//p" signing/keystore.properties | head -n 1; }
+          STORE_PASSWORD="$(read_prop storePassword)"
+          KEY_PASSWORD="$(read_prop keyPassword)"
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+          echo "store_password=$STORE_PASSWORD" >> "$GITHUB_OUTPUT"
+          echo "key_password=$KEY_PASSWORD" >> "$GITHUB_OUTPUT"
+          echo "key_alias=$(read_prop keyAlias)" >> "$GITHUB_OUTPUT"
+          echo "store_type=$(read_prop storeType)" >> "$GITHUB_OUTPUT"
+
       - name: Build and sign
         shell: bash
         run: |
@@ -129,10 +125,10 @@ jobs:
           chmod +x gradlew
           APP_VERSION="${{ needs.setup.outputs.app_version }}"
           BOOST_VERSION="${{ needs.setup.outputs.boost_version }}"
-          STORE_PASSWORD="${{ needs.setup.outputs.store_password }}"
-          KEY_PASSWORD="${{ needs.setup.outputs.key_password }}"
-          KEY_ALIAS="${{ needs.setup.outputs.key_alias }}"
-          STORE_TYPE="${{ needs.setup.outputs.store_type }}"
+          STORE_PASSWORD="${{ steps.signing.outputs.store_password }}"
+          KEY_PASSWORD="${{ steps.signing.outputs.key_password }}"
+          KEY_ALIAS="${{ steps.signing.outputs.key_alias }}"
+          STORE_TYPE="${{ steps.signing.outputs.store_type }}"
           echo "::add-mask::$STORE_PASSWORD"
           echo "::add-mask::$KEY_PASSWORD"
 
@@ -186,6 +182,20 @@ jobs:
           yes | "$SDKMANAGER" --licenses > /dev/null || true
           "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
 
+      - name: Read signing material
+        id: signing
+        shell: bash
+        run: |
+          read_prop() { sed -n "s/^$1=//p" signing/keystore.properties | head -n 1; }
+          STORE_PASSWORD="$(read_prop storePassword)"
+          KEY_PASSWORD="$(read_prop keyPassword)"
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+          echo "store_password=$STORE_PASSWORD" >> "$GITHUB_OUTPUT"
+          echo "key_password=$KEY_PASSWORD" >> "$GITHUB_OUTPUT"
+          echo "key_alias=$(read_prop keyAlias)" >> "$GITHUB_OUTPUT"
+          echo "store_type=$(read_prop storeType)" >> "$GITHUB_OUTPUT"
+
       - name: Build and sign clients
         shell: bash
         run: |
@@ -193,10 +203,10 @@ jobs:
           chmod +x gradlew
           APP_VERSION="${{ needs.setup.outputs.app_version }}"
           BOOST_VERSION="${{ needs.setup.outputs.boost_version }}"
-          STORE_PASSWORD="${{ needs.setup.outputs.store_password }}"
-          KEY_PASSWORD="${{ needs.setup.outputs.key_password }}"
-          KEY_ALIAS="${{ needs.setup.outputs.key_alias }}"
-          STORE_TYPE="${{ needs.setup.outputs.store_type }}"
+          STORE_PASSWORD="${{ steps.signing.outputs.store_password }}"
+          KEY_PASSWORD="${{ steps.signing.outputs.key_password }}"
+          KEY_ALIAS="${{ steps.signing.outputs.key_alias }}"
+          STORE_TYPE="${{ steps.signing.outputs.store_type }}"
           echo "::add-mask::$STORE_PASSWORD"
           echo "::add-mask::$KEY_PASSWORD"
 
@@ -254,6 +264,20 @@ jobs:
           yes | "$SDKMANAGER" --licenses > /dev/null || true
           "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;37.0.0"
 
+      - name: Read signing material
+        id: signing
+        shell: bash
+        run: |
+          read_prop() { sed -n "s/^$1=//p" signing/keystore.properties | head -n 1; }
+          STORE_PASSWORD="$(read_prop storePassword)"
+          KEY_PASSWORD="$(read_prop keyPassword)"
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+          echo "store_password=$STORE_PASSWORD" >> "$GITHUB_OUTPUT"
+          echo "key_password=$KEY_PASSWORD" >> "$GITHUB_OUTPUT"
+          echo "key_alias=$(read_prop keyAlias)" >> "$GITHUB_OUTPUT"
+          echo "store_type=$(read_prop storeType)" >> "$GITHUB_OUTPUT"
+
       - name: Build extras
         shell: bash
         env:
@@ -264,10 +288,10 @@ jobs:
           chmod +x gradlew
           APP_VERSION="${{ needs.setup.outputs.app_version }}"
           BOOST_VERSION="${{ needs.setup.outputs.boost_version }}"
-          STORE_PASSWORD="${{ needs.setup.outputs.store_password }}"
-          KEY_PASSWORD="${{ needs.setup.outputs.key_password }}"
-          KEY_ALIAS="${{ needs.setup.outputs.key_alias }}"
-          STORE_TYPE="${{ needs.setup.outputs.store_type }}"
+          STORE_PASSWORD="${{ steps.signing.outputs.store_password }}"
+          KEY_PASSWORD="${{ steps.signing.outputs.key_password }}"
+          KEY_ALIAS="${{ steps.signing.outputs.key_alias }}"
+          STORE_TYPE="${{ steps.signing.outputs.store_type }}"
           echo "::add-mask::$STORE_PASSWORD"
           echo "::add-mask::$KEY_PASSWORD"
 
