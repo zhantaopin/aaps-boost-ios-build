@@ -60,7 +60,7 @@ import dev.zacsweers.metro.IntKey as MetroIntKey
 @MetroIntKey(236)
 @SingleIn(AppScope::class)
 @Inject
-class OpenAPSBoostV5PluginStub @Inject constructor(
+class OpenAPSBoostV5PluginStub(
     aapsLogger: AAPSLogger,
     rh: TextResolver,
     preferences: Preferences,
