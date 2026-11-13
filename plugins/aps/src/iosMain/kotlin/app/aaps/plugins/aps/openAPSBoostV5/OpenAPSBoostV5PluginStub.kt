@@ -89,6 +89,19 @@ class OpenAPSBoostV5PluginStub(
     override var lastAPSResult: APSResult? = null
     override var lastAPSRun: Long = 0L
 
+    /**
+     * The Android plugin's class name, deliberately not this class's own.
+     *
+     * [PluginBase.pluginId] defaults to `this::class.simpleName`, and that string is what the synced
+     * ActivePlugin keys carry between client and master: `ConfigBuilderImpl.startActivePluginObservers`
+     * adopts a pushed selection with `getSpecificPluginsList(type).firstOrNull { it.pluginId == incoming }`.
+     * Without this override the client published "OpenAPSBoostV5PluginStub", which the master has never
+     * heard of, so choosing Boost on iOS did nothing at all; and the master's own "OpenAPSBoostV5Plugin"
+     * matched nothing here, so the client could not follow a master on Boost either. AMA and SMB switch
+     * normally because those classes are shared rather than stubbed - which is how this was found.
+     */
+    override val pluginId: String = "OpenAPSBoostV5Plugin"
+
     override fun getPreferenceScreenContent(): PreferenceSubScreenDef = PreferenceSubScreenDef(
         key = "openapsboostv5_settings",
         title = ApsStrings.openaps_boost_v5,

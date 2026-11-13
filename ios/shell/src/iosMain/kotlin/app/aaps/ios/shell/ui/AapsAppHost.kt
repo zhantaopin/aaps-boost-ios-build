@@ -461,7 +461,12 @@ private fun AapsApp(app: StartedApp) {
                             if (result.grantedLevel != null) onGranted()
                         }
                     },
-                    onRefreshPermissions = { reportNotAvailable("permission refresh") },
+                    // Every plugin switch calls this. It used to answer "not available on this
+                    // platform", which put a snackbar under the user's thumb after each selection
+                    // change and read as if the switch had failed - it had not. There is nothing to
+                    // refresh on iOS: `IosPluginPermissions` computes its (always empty) lists on
+                    // demand, and no permission is granted ahead of use, so the answer is silence.
+                    onRefreshPermissions = {},
                     onExecuteQuickWizard = { guid -> reportNotReady("quick wizard $guid") },
                     onRequestDirectoryAccess = { reportNotReady("directory access - iOS needs a document picker") },
                     onRequestPermission = { group -> reportNotAvailable("permission request $group") },
