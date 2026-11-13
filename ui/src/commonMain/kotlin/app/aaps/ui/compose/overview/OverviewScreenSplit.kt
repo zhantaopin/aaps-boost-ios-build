@@ -80,6 +80,8 @@ fun OverviewScreenSplit(
     eatReminderBanner: @Composable () -> Unit = {},
     /** Height of the bars drawn over the content in preview mode; both columns need it as extra space at their end. */
     overlaidBarsHeight: Dp = 0.dp,
+    /** Optional card under the glucose row, above the status rows. Null on Android. */
+    boostV5: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val config = LocalConfig.current
@@ -174,6 +176,8 @@ fun OverviewScreenSplit(
                         )
                     }
                 }
+
+                boostV5?.invoke()
 
                 OverviewStatusSection(
                     sensorStatus = statusState.sensorStatus,

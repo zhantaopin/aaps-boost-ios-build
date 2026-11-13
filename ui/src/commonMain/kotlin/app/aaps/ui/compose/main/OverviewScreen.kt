@@ -32,6 +32,7 @@ import app.aaps.ui.compose.maintenance.ImportSource
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.manageSheet.ManageSheetHost
 import app.aaps.ui.compose.manageSheet.ManageViewModel
+import app.aaps.ui.compose.overview.BoostV5Strip
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.overview.statusLights.StatusViewModel
@@ -96,6 +97,12 @@ fun OverviewScreen(
     // Text the app module owns
     appName: String,
     authorizationFailedMessage: String,
+    /**
+     * Draws the Boost V5 state-machine strip above the status rows. Off by default: the Android master
+     * shows the same values on its dedicated Boost V2 screen, and those who never selected V5 must not
+     * see an empty card. The iOS client has no such screen, so its shell turns this on.
+     */
+    showBoostV5Strip: Boolean = false,
     // Navigation, which the platform routes because it holds the controller
     onNavigate: (NavigationRequest) -> Unit,
     onSearchResultClick: (SearchIndexEntry) -> Unit,
@@ -121,6 +128,12 @@ fun OverviewScreen(
     val bolusState by bolusProgressData.state.collectAsStateWithLifecycle()
     val pumpStatusBanner by pumpCommunicationStatus.statusBannerFlow.collectAsStateWithLifecycle()
     val pumpQueueStatus by pumpCommunicationStatus.queueStatusFlow.collectAsStateWithLifecycle()
+    val boostV5State by mainViewModel.boostV5Strip.collectAsStateWithLifecycle()
+    // Composed here rather than in the layouts, so the slot is a ready-made piece of content.
+    val boostV5StripData = boostV5State
+    val boostV5Slot: (@Composable () -> Unit)? =
+        if (!showBoostV5Strip || boostV5StripData == null) null
+        else { { BoostV5Strip(boostV5StripData) } }
 
     // Pump setup button in bottom bar.
     // The three casts here and below are `as?`, not `as`. Each of them runs before the condition
@@ -229,6 +242,7 @@ fun OverviewScreen(
         autoShowNotificationSheet = autoShowNotificationSheet,
         onAutoShowConsumed = onAutoShowConsumed,
         pumpSetupPlugin = pumpSetupPlugin,
+        boostV5 = boostV5Slot,
         bgSetupPlugin = bgSetupPlugin,
         bgQualityBadgeIcon = bgQualityBadgeIcon,
         bgQualityBadgeTint = bgQualityBadgeTint,

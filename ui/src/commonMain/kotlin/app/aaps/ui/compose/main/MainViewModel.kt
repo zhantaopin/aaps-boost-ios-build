@@ -32,6 +32,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.overview.graph.ProfileDisplayData
 import app.aaps.core.interfaces.overview.graph.RunningModeDisplayData
@@ -83,6 +84,7 @@ import app.aaps.core.ui.compose.navigation.icon
 import app.aaps.core.ui.extensions.toStringFull
 import app.aaps.ui.UiStrings
 import app.aaps.ui.compose.aboutDialog.AboutDialogData
+import app.aaps.ui.compose.overview.BoostV5StripData
 import app.aaps.ui.compose.quickLaunch.QuickLaunchAction
 import app.aaps.ui.compose.quickLaunch.QuickLaunchResolver
 import app.aaps.ui.compose.quickLaunch.QuickLaunchSerializer
@@ -146,6 +148,7 @@ class MainViewModel(
     private val activeSceneManager: ActiveSceneSync,
     private val rxBus: RxBus,
     private val nsClient: NsClient,
+    private val processedDeviceStatusData: ProcessedDeviceStatusData,
     private val visibilityContext: VisibilityContext,
     // Unqualified: @ApplicationScope is a javax qualifier and cannot appear in commonMain. The graph
     // binds the same instance under both names.
@@ -174,6 +177,20 @@ class MainViewModel(
      * flapping [masterReachable] exhibits.
      */
     val masterOrPairedClient: StateFlow<Boolean> = nsClient.masterOrPairedClientFlow
+
+    /**
+     * The V5 state machine of the last loop result, or null when V5 was not the active engine.
+     *
+     * The seven `boostV5_*` fields ride the master's devicestatus upload and are decoded into `RT` by
+     * the receive pipeline, so a client has them in memory without any extra request. They are not
+     * reactive on their own ([ProcessedDeviceStatusData] is a plain mutable snapshot), which is why
+     * this is driven by [NsClient.lastDevicestatusReceivedAt]: every batch that could have replaced the
+     * result moves that clock.
+     */
+    val boostV5Strip: StateFlow<BoostV5StripData?> =
+        nsClient.lastDevicestatusReceivedAt
+            .map { BoostV5StripData.fromRt(processedDeviceStatusData.openAPSData.suggested) }
+            .stateIn(appScope, SharingStarted.WhileSubscribed(5_000), null)
 
     // Ticker for time-based progress updates (every 30 seconds). Cold flow — only runs while the
     // toolbar items or the chipStateFlow it feeds have subscribers (both are WhileSubscribed below).

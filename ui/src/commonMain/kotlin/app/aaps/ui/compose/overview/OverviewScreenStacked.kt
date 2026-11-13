@@ -75,6 +75,8 @@ fun OverviewScreenStacked(
     eatReminderBanner: @Composable () -> Unit = {},
     /** Height of the bars drawn over the content in preview mode (a short window, e.g. split screen); added to the end space. */
     overlaidBarsHeight: Dp = 0.dp,
+    /** Optional card under the glucose row, above the status rows. Null on Android. */
+    boostV5: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val config = LocalConfig.current
@@ -146,6 +148,8 @@ fun OverviewScreenStacked(
                     .padding(start = 8.dp)
             )
         }
+
+        boostV5?.invoke()
 
         OverviewStatusSection(
             sensorStatus = statusState.sensorStatus,

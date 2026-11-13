@@ -496,6 +496,10 @@ private fun AapsApp(app: StartedApp) {
                             pumpCommunicationStatus = graph.pumpCommunicationStatus,
                             appName = appName,
                             authorizationFailedMessage = "Authorization failed",
+                            // No Boost V2 screen on this client: the state machine the master publishes
+                            // in its loop result has nowhere else to land, and the strip hides itself
+                            // whenever V5 was not the engine that decided the cycle.
+                            showBoostV5Strip = true,
                             onNavigate = { request -> navigator.handleNavigationRequest(request) },
                             onSearchResultClick = { entry -> navigator.handleSearchResultClick(entry) },
                             onNotificationActionClick = { n -> navigator.handleNotificationAction(n.id) },
