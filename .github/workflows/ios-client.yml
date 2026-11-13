@@ -42,7 +42,9 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  # write: the ipas are also published to a rolling release, because the artifact service
+  # (actions/upload-artifact) has timed out on us and taken a finished build with it.
+  contents: write
 
 env:
   CONFIG: ${{ inputs.configuration || 'Debug' }}
@@ -196,11 +198,29 @@ jobs:
 
       - name: Upload ipas
         uses: actions/upload-artifact@v4
+        # Not allowed to fail the job: the release upload below is the one that has to work.
+        continue-on-error: true
         with:
           name: aaps-boost-ios-unsigned
           path: dist/*.ipa
           if-no-files-found: error
           retention-days: 30
+
+      # A finished build used to be lost when the artifact service timed out ("Failed to
+      # CreateArtifact ... Request timeout"). Release assets are a different service, so the
+      # ipas go there too. The tag deliberately does not match `ios-*` - creating it would
+      # otherwise trigger this same workflow again, forever.
+      - name: Publish ipas to the rolling release
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ls -lh dist || true
+          gh release view ipa-latest -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create ipa-latest -R "$GITHUB_REPOSITORY" \
+              --title "iOS unsigned ipa (latest)" \
+              --notes "Debug build of the iOS follower, rebuilt by CI. Unsigned - sideload it."
+          gh release upload ipa-latest -R "$GITHUB_REPOSITORY" dist/*.ipa --clobber
 
       - name: Keep the build logs
         if: always()
