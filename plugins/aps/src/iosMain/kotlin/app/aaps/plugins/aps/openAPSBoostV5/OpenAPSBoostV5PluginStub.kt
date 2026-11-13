@@ -4,6 +4,7 @@ import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.aps.GlucoseStatus
+import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.PluginBaseWithPreferences
@@ -65,6 +66,7 @@ class OpenAPSBoostV5PluginStub(
     rh: TextResolver,
     preferences: Preferences,
     notificationManager: NotificationManager,
+    config: Config,
 ) : PluginBaseWithPreferences(
     PluginDescription()
         .mainType(PluginType.APS)
@@ -72,7 +74,13 @@ class OpenAPSBoostV5PluginStub(
         .pluginName(ApsStrings.openaps_boost_v5)
         .preferencesVisibleInSimpleMode(true)
         .showInList { true }
-        .description(ApsStrings.description_boost_v5),
+        .description(ApsStrings.description_boost_v5)
+        // The only APS `.setDefault()` in the Android build sits on the real Boost V5 plugin, which
+        // iosMain does not compile. Without a default here `PluginStore.verifySelectionInCategories`
+        // throws "Default plugin not found" out of `ConfigBuilderImpl.initialize()` and the app dies
+        // during startup. A follower is the only iOS build there is, so client-only covers it - and
+        // it keeps this stub from quietly becoming the default engine of a hypothetical iOS master.
+        .setDefault(config.AAPSCLIENT),
     ownPreferences = ALL_BOOST_BIDIRECTIONAL_KEYS,
     aapsLogger, rh, preferences, notificationManager
 ), APS {
